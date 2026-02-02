@@ -1,0 +1,32 @@
+name: C CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install the toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential imagemagick wget python3-pip
+
+      - name: Build with warnings treated as errors
+        run: make check
+
+      - name: Install the test runner
+        run: python3 -m pip install --user pytest
+
+      - name: Run the integration test suite
+        run: python3 -m pytest -q
+
+      - name: Clean the build tree
+        run: make clean

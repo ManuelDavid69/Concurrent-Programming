@@ -1,0 +1,298 @@
+# Concurrent Programming
+
+![C CI](https://github.com/ManuelDavid69/Concurrent-Programming/actions/workflows/ci.yml/badge.svg)
+![C11](https://img.shields.io/badge/C-C11-blue)
+![POSIX](https://img.shields.io/badge/POSIX-processes%20%7C%20threads-informational)
+![License MIT](https://img.shields.io/badge/license-MIT-yellow)
+
+Practical work for the **Concurrent Programming** course at **CPE Lyon**
+(4IRC, 2025/2026). The repository collects the fourteen lab sessions and the
+graphics-pipeline lab, implemented in C11 on Linux/POSIX.
+
+The progression follows the course: from a C refresher and classic data
+structures to process creation (`fork`, `exec`, `wait`), anonymous pipes,
+signals, System V semaphores and shared memory, then POSIX threads, barriers
+and a complete multi-stage software rendering pipeline.
+
+> The exercise statements are course material from CPE Lyon. This repository
+> contains the implementations, tests, measurements and written answers.
+
+---
+
+## Contents
+
+- [Overview](#overview)
+- [Highlights](#highlights)
+- [Quick start](#quick-start)
+- [Repository structure](#repository-structure)
+- [The sessions](#the-sessions)
+- [Tests](#tests)
+- [Concepts covered](#concepts-covered)
+- [Documentation](#documentation)
+- [Credits](#credits)
+- [License](#license)
+
+---
+
+## Overview
+
+| # | Session | Main deliverables |
+|---|---|---|
+| 1 | **C refresher** | prime factorisation, look-and-say, line intersection, insertion sort |
+| 2 | **Heap** | array min-heap, insertion, extraction, heap sort, ASCII tree display |
+| 3 | **Image and state machine** | PPM convolution blur, three digicode automata |
+| 4 | **Arguments and `fork`** | `miroir`, `moyenne`, forked process tree, `wait`, ordered children |
+| 5 | **`fork` and `exec`** | concurrent/successive commands, bounded thumbnail and download workers, parallel `make` |
+| 6 | **Anonymous pipes** | number-guessing game, shell redirections, four-process filter |
+| 7 | **Pipes, continued** | ring of processes finding a maximum, pipe-based calculator |
+| 8 | **Semaphores** | precedence, two- and three-process rendezvous, 1-to-2 rendezvous |
+| 9 | **Signals** | interception, ignoring, clean stop, `SIGKILL`, `SIGUSR1/2`, timeout |
+| 10 | **Shared memory** | N-way rendezvous, bounded producer/consumer, value exchange |
+| 11 | **Shared-memory applications** | multi-server calculator, parallel image processing |
+| 12 | **Threads** | rendezvous with and without barriers, producer/consumer, exchange, Mandelbrot |
+| 14 | **Threads, continued** | ball resource manager with a controller, Monte-Carlo estimation of pi |
+| — | **Graphics pipeline** | triangle → raster → shader pipeline synchronised with barriers |
+
+---
+
+## Highlights
+
+- **Every session is runnable**: each directory has its own `Makefile` and a
+  short README; the top-level `make` builds all of them.
+- **Process and thread safety is tested**, not just assumed: the suite checks
+  FIFO order, bounded parallelism, barrier semantics, signal handling, shared
+  memory contents and the absence of zombie processes.
+- **No busy waiting** in the synchronisation code: blocking semaphores,
+  condition variables and barriers are used throughout.
+- **A real software renderer**: the pipeline lab generates a PPM image from a
+  procedural 3D scene with one triangle producer, several rasterisers and
+  several shaders, synchronised by a barrier at every colour change.
+- **Warnings are errors** in CI: `-Wall -Wextra -Werror` on Ubuntu with GCC.
+
+---
+
+## Quick start
+
+Requirements: a POSIX system (Linux, WSL, macOS), `gcc` or `clang`, `make`,
+Python 3 and `pytest`. ImageMagick and `wget` are only needed by TP 5.
+
+```bash
+git clone https://github.com/ManuelDavid69/Concurrent-Programming.git
+cd Concurrent-Programming
+
+make                 # build every session
+make check           # rebuild with -Werror
+python3 -m pytest    # integration tests
+```
+
+Build and run one session:
+
+```bash
+make -C tp07
+./tp07/bin/greater 6
+```
+
+Some labs need shared resources to be created first:
+
+```bash
+make -C tp08
+./tp08/bin/init
+./tp08/bin/first & ./tp08/bin/second
+./tp08/bin/clean
+```
+
+---
+
+## Repository structure
+
+```
+common/          error handling, PPM images, System V IPC helpers
+tp01/            C refresher
+tp02/            heap and heap sort
+tp03/            PPM blur and digicode state machines
+tp04/            arguments, fork, wait, process trees
+tp05/            fork/exec, bounded parallelism, mini make
+tp06/            anonymous pipes and redirections
+tp07/            ring of processes and pipe calculator
+tp08/            System V semaphores
+tp09/            signals
+tp10/            System V shared memory
+tp11/            shared-memory calculator and image processing
+tp12/            POSIX threads
+tp14/            thread resource manager and Monte-Carlo pi
+pipeline/        threaded software graphics pipeline
+docs/            one detailed document per session
+tests/           pytest integration suite
+```
+
+Each `tpXX/` directory contains its sources, a `Makefile`, a short `README.md`
+and a `bin/` directory created by the build (ignored by Git).
+
+---
+
+## The sessions
+
+### 1. C refresher
+
+Prime factorisation with an optimised smallest-divisor search, the
+look-and-say sequence, intersection of two lines with all degenerate cases
+(parallel, confounded, vertical) and insertion sort.
+
+### 2. Heap
+
+Array implementation of a min-heap (`left = 2i + 1`, `right = 2i + 2`), with
+insertion by sifting up, extraction by sifting down, heap sort, a validity
+checker and three display formats including an ASCII tree.
+
+### 3. Image and state machine
+
+A PPM reader/writer and a 3×3 mean blur using the *kernel crop* strategy on
+the borders. Three digicode automata: `5742`, `5551` (repeated digit) and
+`8267B` with `A`/`B` validation.
+
+### 4. Arguments and `fork`
+
+String reversal and average of grades with strict validation; a `fork` inside
+a three-iteration loop with no `if`; a parent that waits for N children and
+reports their exit codes; four children printing `1..200`, first concurrently
+and then in guaranteed order through a token pipe.
+
+### 5. `fork` and `exec`
+
+`du`, `ls` and `ps` launched simultaneously or successively; thumbnails with
+at most eight `convert` processes; downloads with at most four `wget`
+processes; a mini `make` that compiles sources in parallel and links them only
+if every compilation succeeded.
+
+### 6. Anonymous pipes
+
+A number-guessing game over two pipes; `wc < /etc/passwd`, `cut | tr` and the
+full `cut | sed | sort > users` pipeline; a four-process even/odd filter with
+a generator, a dispatcher and two summers.
+
+### 7. Pipes, continued
+
+A ring of N processes where each process forwards the largest value seen so
+far, and a calculator with one request pipe and one response pipe per client.
+
+### 8. Semaphores
+
+`init`/`clean` programs for the System V semaphore set; strict precedence
+between two unrelated processes; rendezvous for two and three processes; and
+the 1-emitter/2-receivers rendezvous with shared counters.
+
+### 9. Signals
+
+Seven programs covering `SIGINT` interception, `SIG_IGN`, a clean stop flag,
+`SIGKILL` from parent to child, inherited terminal signals, `SIGUSR1`/
+`SIGUSR2` communication and a five-second input timeout with `SIGALRM`.
+
+### 10. Shared memory
+
+A reusable N-way barrier built from a mutex, a counter and two turnstiles; a
+bounded FIFO producer/consumer with several producers and consumers; and the
+three-process value-exchange algorithm (P0, P1, P2).
+
+### 11. Shared-memory applications
+
+A multi-server arithmetic calculator with per-client result slots, and a
+parallel image-processing service where workers pull file names from a
+five-slot shared queue and write blurred PPM images.
+
+### 12. Threads
+
+Rendezvous for N threads implemented with a mutex/condition variable and with
+`pthread_barrier_t`; a bounded producer/consumer; a three-thread exchange; and
+a multi-threaded Mandelbrot renderer.
+
+### 14. Threads, continued
+
+A ball manager: N workers request, use and return balls, while a controller
+thread continuously checks the invariant `0 <= available <= max`. A
+single-threaded and multi-threaded Monte-Carlo estimation of pi, with a
+timing comparison.
+
+### Graphics pipeline
+
+A procedural 3D torus is cut into triangles by one producer, rasterised by
+several threads into fragments, and shaded by several threads into an image.
+A barrier synchronises all stages whenever the scene changes colour, which
+removes the tearing visible without synchronisation.
+
+---
+
+## Tests
+
+```bash
+python3 -m pytest -q
+```
+
+The suite builds the project once, then runs the binaries. It covers:
+
+- deterministic algorithms and edge cases (TP 1–3);
+- process trees, exit codes, ordering and bounded parallelism (TP 4–7);
+- semaphore precedence, rendezvous, FIFO and invariant checking (TP 8, 10);
+- signal delivery, timeout and clean shutdown (TP 9);
+- multi-server request/response and image outputs (TP 11);
+- thread rendezvous, producer/consumer and Mandelbrot images (TP 12, 14);
+- the complete graphics pipeline with one and several workers.
+
+Tests that need optional tools (`convert`, `wget`) are skipped when those
+tools are missing.
+
+---
+
+## Concepts covered
+
+| Concept | Where |
+|---|---|
+| Dynamic arrays, sorting, numerical edge cases | TP 1 |
+| Binary heaps, `O(log n)` insertion/extraction, heap sort | TP 2 |
+| PPM format, convolution, finite-state automata | TP 3 |
+| `fork`, `wait`, `waitpid`, process trees, exit codes | TP 4 |
+| `execvp`, `dup2`, bounded concurrency, pipes for ordering | TP 5–6 |
+| Anonymous pipes, `PIPE_BUF`, partial reads/writes | TP 6–7 |
+| System V semaphores (`semget`, `semop`, `semctl`) | TP 8 |
+| Signals (`sigaction`, `SIGALRM`, `kill`, `pause`) | TP 9 |
+| System V shared memory (`shmget`, `shmat`, `shmdt`) | TP 10–11 |
+| POSIX threads, mutexes, condition variables, barriers | TP 12, 14 |
+| Producer/consumer, rendezvous, monitors, invariants | TP 8–14 |
+| Software rasterisation and pipeline synchronisation | Pipeline |
+
+---
+
+## Documentation
+
+Each session has a detailed write-up in [`docs/`](docs/):
+
+| Session | Document |
+|---|---|
+| 1 | [C refresher](docs/TP01-c-refresher.md) |
+| 2 | [Heap and heap sort](docs/TP02-heap.md) |
+| 3 | [Image and state machine](docs/TP03-image-state-machine.md) |
+| 4 | [Arguments and fork](docs/TP04-arguments-fork.md) |
+| 5 | [Fork and exec](docs/TP05-fork-exec.md) |
+| 6 | [Anonymous pipes](docs/TP06-pipes.md) |
+| 7 | [Pipes, continued](docs/TP07-pipes-ring.md) |
+| 8 | [Semaphores](docs/TP08-semaphores.md) |
+| 9 | [Signals](docs/TP09-signals.md) |
+| 10 | [Shared memory](docs/TP10-shared-memory.md) |
+| 11 | [Shared-memory applications](docs/TP11-shared-memory-applications.md) |
+| 12 | [Threads](docs/TP12-threads.md) |
+| 14 | [Threads, continued](docs/TP14-threads-advanced.md) |
+| — | [Graphics pipeline](docs/PIPELINE-graphics.md) |
+
+---
+
+## Credits
+
+- **Course and exercise statements**: CPE Lyon, *Programmation concurrente*,
+  4IRC, 2025/2026.
+- **Implementations, tests, measurements and documentation**:
+  [Manuel David](https://github.com/ManuelDavid69).
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
