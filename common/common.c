@@ -153,7 +153,7 @@ void pc_sleep(double seconds)
 {
     struct timespec request;
     struct timespec remaining;
-    double scaled = seconds / pc_sleep_scale();
+    double scaled = seconds * pc_sleep_scale();
 
     if (scaled <= 0.0) {
         return;
@@ -167,7 +167,7 @@ void pc_sleep(double seconds)
 
 int pc_delay_ms(int milliseconds)
 {
-    double scaled = (double)milliseconds / pc_sleep_scale();
+    double scaled = (double)milliseconds * pc_sleep_scale();
     int result = (int)(scaled + 0.5);
 
     return result < 1 ? 1 : result;

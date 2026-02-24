@@ -36,8 +36,9 @@ int rand_range(int minimum, int maximum);
 
 /*
  * All the labs that simulate work use these helpers.  PC_SLEEP_SCALE (a
- * positive floating-point number, default 1.0) divides every duration, which
- * keeps the integration tests fast without changing the programs.
+ * positive floating-point number, default 1.0) multiplies every duration, so
+ * a value below 1 keeps the integration tests fast without changing the
+ * programs.
  */
 double pc_sleep_scale(void);
 void pc_sleep(double seconds);
