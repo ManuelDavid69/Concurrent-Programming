@@ -73,7 +73,7 @@ void sem_remove(int identifier)
 int sem_p(int identifier, int index)
 {
     for (;;) {
-        if (semaphore_operation(identifier, index, -1, SEM_UNDO) == 0) {
+        if (semaphore_operation(identifier, index, -1, 0) == 0) {
             return 0;
         }
         if (errno != EINTR) {
@@ -84,17 +84,17 @@ int sem_p(int identifier, int index)
 
 int sem_v(int identifier, int index)
 {
-    return semaphore_operation(identifier, index, 1, SEM_UNDO);
+    return semaphore_operation(identifier, index, 1, 0);
 }
 
 int sem_p_interruptible(int identifier, int index)
 {
-    return semaphore_operation(identifier, index, -1, SEM_UNDO);
+    return semaphore_operation(identifier, index, -1, 0);
 }
 
 int sem_try_p(int identifier, int index)
 {
-    return semaphore_operation(identifier, index, -1, SEM_UNDO | IPC_NOWAIT);
+    return semaphore_operation(identifier, index, -1, IPC_NOWAIT);
 }
 
 int shm_create(key_t key, size_t size)
