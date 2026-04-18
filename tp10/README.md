@@ -30,7 +30,8 @@ one mutex, one `empty` and one `full` semaphore.  `init` also records the
 expected number of producers so that the last one can mark the buffer as
 finished and wake every consumer.
 
-The exchange uses three cells and three semaphores.  P1 writes its maximum in
+The exchange uses three cells and four semaphores (one arrival per process and
+one response per process).  P1 writes its maximum in
 cell 0, P2 writes its minimum in cell 1, and P0 swaps them (or writes `-1` in
 cell 2 when no swap is needed).  P1 and P2 replace their extremum with the
 value returned by P0 and repeat until the tables are separated.

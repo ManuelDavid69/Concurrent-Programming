@@ -35,7 +35,8 @@ int main(void)
         } else {
             exchange->third = -1;
         }
-        if (sem_v(semaphores, EXCH_P0) < 0 || sem_v(semaphores, EXCH_P0) < 0) {
+        if (sem_v(semaphores, EXCH_P0_TO_P1) < 0
+            || sem_v(semaphores, EXCH_P0_TO_P2) < 0) {
             die("sem_v failed");
         }
         if (exchange->third == -1) {

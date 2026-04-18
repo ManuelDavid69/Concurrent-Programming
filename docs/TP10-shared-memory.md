@@ -18,7 +18,7 @@
 |---|---|---|
 | rendezvous | `RendezVous { count, generation }` | mutex, turnstile 0, turnstile 1 |
 | producer/consumer | `Buffer` with `capacity` integers | mutex, empty, full |
-| exchange | `Echange { first, second, third }` | P1, P2, P0 |
+| exchange | `Echange { first, second, third }` | P1, P2, P0 vers P1, P0 vers P2 |
 
 `clean` removes all six resources.  Removing stale resources at the beginning
 of `init` makes the programs re-runnable after a crash.
@@ -104,7 +104,7 @@ P1 and P2 each hold a table of eight integers.  In each round:
 3. P0 waits for both, then:
    - if `cell0 > cell1`, swaps the two values and sets cell 2 to 0;
    - otherwise sets cell 2 to `-1`;
-4. P0 posts `P0` twice, releasing P1 and P2;
+4. P0 posts one response semaphore per thread (`P0 vers P1` and `P0 vers P2`);
 5. P1 replaces its maximum by the value in cell 0; P2 replaces its minimum by
    the value in cell 1; both loop.
 
@@ -116,8 +116,10 @@ so eight exchanges are required to separate them.  The final tables are
 `{1..8}` and `{20..90}`.
 
 The three cells are protected by the protocol itself: P0 reads them only after
-both posts, and P1/P2 read their cell only after P0's post.  No additional
-mutex is needed.
+both arrivals, and P1/P2 read their cell only after their own response
+semaphore.  Two response semaphores are necessary: with a single counting
+semaphore posted twice, one process could consume both tokens and read a cell
+that it has already overwritten.
 
 ---
 

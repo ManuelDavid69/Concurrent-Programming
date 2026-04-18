@@ -27,8 +27,9 @@ enum {
 enum {
     EXCH_P1 = 0,
     EXCH_P2 = 1,
-    EXCH_P0 = 2,
-    EXCH_SEM_COUNT = 3
+    EXCH_P0_TO_P1 = 2,
+    EXCH_P0_TO_P2 = 3,
+    EXCH_SEM_COUNT = 4
 };
 
 typedef struct {

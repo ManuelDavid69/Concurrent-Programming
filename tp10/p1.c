@@ -46,7 +46,7 @@ int main(void)
         if (sem_v(semaphores, EXCH_P1) < 0) {
             die("sem_v failed");
         }
-        if (sem_p(semaphores, EXCH_P0) < 0) {
+        if (sem_p(semaphores, EXCH_P0_TO_P1) < 0) {
             die("sem_p failed");
         }
         if (exchange->third == -1) {

@@ -14,7 +14,7 @@ int main(int argc, char **argv)
     int producers = 1;
     unsigned short rdv_values[RDV_SEM_COUNT] = {1, 0, 0};
     unsigned short pc_values[PC_SEM_COUNT];
-    unsigned short exch_values[EXCH_SEM_COUNT] = {0, 0, 0};
+    unsigned short exch_values[EXCH_SEM_COUNT] = {0, 0, 0, 0};
     int rdv_sem;
     int pc_sem;
     int exch_sem;
