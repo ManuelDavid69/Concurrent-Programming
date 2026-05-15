@@ -43,10 +43,11 @@ static void calcul(int x, int y, unsigned char *pixel)
         pixel[1] = 0;
         pixel[2] = 0;
     } else {
-        double normalized = (double)iteration / MAX_ITERATIONS;
-        pixel[0] = (unsigned char)(255.0 * pow(normalized, 0.4));
-        pixel[1] = (unsigned char)(255.0 * pow(normalized, 0.7));
-        pixel[2] = (unsigned char)(255.0 * pow(normalized, 1.0));
+        double normalized = sqrt((double)iteration / MAX_ITERATIONS);
+        double angle = 2.0 * 3.14159265358979323846 * normalized;
+        pixel[0] = (unsigned char)(255.0 * (0.5 + 0.5 * sin(angle)));
+        pixel[1] = (unsigned char)(255.0 * (0.5 + 0.5 * sin(angle + 2.0943951023931953)));
+        pixel[2] = (unsigned char)(255.0 * (0.5 + 0.5 * sin(angle + 4.1887902047863905)));
     }
 }
 
