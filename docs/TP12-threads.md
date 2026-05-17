@@ -110,6 +110,8 @@ On a typical machine, running the 800×600 image with 4 threads is about three
 to four times faster than with 1 thread, depending on the number of cores and
 on the amount of black (expensive) pixels.
 
+![Mandelbrot rendered with four threads](images/fractale.png)
+
 The output is deterministic: the 1-thread and 4-thread images are byte-for-byte
 identical, which the test suite checks.
 

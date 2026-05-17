@@ -110,7 +110,7 @@ recompiling unchanged files; the exercise focuses on the process management.
 make -C tp05
 ./tp05/bin/simultane
 ./tp05/bin/successif
-./tp05/bin/miniature tp05/samples/images /tmp/thumbs
+./tp05/bin/miniature images /tmp/thumbs
 ./tp05/bin/telecharge https://example.com/a.txt https://example.com/b.txt /tmp/downloads
 ./tp05/bin/make tp05/samples/success/*.c /tmp/demo
 python3 -m pytest tests/test_tp05.py -q

@@ -132,9 +132,10 @@ the same torus silhouette.  The exact pixel values are deterministic for a
 given configuration; different thread counts may differ on shared triangle
 edges because the order of equal-depth fragments is not specified.
 
-The generated image is shown in the repository's README when the pipeline is
-run.  The barrier removes the horizontal colour bands that appear when the
-stages are not synchronised.
+The generated image is shown below.  The barrier removes the horizontal colour
+bands that appear when the stages are not synchronised.
+
+![Torus rendered by the pipeline](images/pipeline.png)
 
 ---
 
