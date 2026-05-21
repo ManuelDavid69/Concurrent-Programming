@@ -8,8 +8,10 @@ TPS := tp01 tp02 tp03 tp04 tp05 tp06 tp07 tp08 tp09 tp10 tp11 tp12 tp14 pipeline
 
 all: common
 	@for dir in $(TPS); do \
-		echo "==> $$dir"; \
-		$(MAKE) -C $$dir || exit 1; \
+		if [ -d "$$dir" ]; then \
+			echo "==> $$dir"; \
+			$(MAKE) -C $$dir || exit 1; \
+		fi; \
 	done
 
 common:
@@ -20,11 +22,11 @@ $(TPS):
 
 clean:
 	$(MAKE) -C common clean
-	@for dir in $(TPS); do $(MAKE) -C $$dir clean; done
+	@for dir in $(TPS); do if [ -d "$$dir" ]; then $(MAKE) -C $$dir clean; fi; done
 
 check:
 	$(MAKE) clean
-	$(MAKE) CFLAGS="-std=c11 -Wall -Wextra -Werror -g -O2" all
+	$(MAKE) CFLAGS="-std=c11 -Wall -Wextra -Werror -g -O2 -pthread" all
 
 test: all
 	python3 -m pytest -q
