@@ -13,15 +13,26 @@
  */
 int main(void)
 {
-    char *const commands[][4] = {
+    const char *path = getenv("SIMULTANE_PATH");
+    char first_label[256];
+    char *commands[][4] = {
         {"du", "-sh", "/usr/share", NULL},
         {"ls", "-l", NULL, NULL},
         {"ps", NULL, NULL, NULL},
     };
-    const char *labels[] = {"du -sh /usr/share", "ls -l", "ps"};
+    const char *labels[3];
     pid_t children[3];
     int index;
     int failed = 0;
+
+    if (path == NULL || *path == '\0') {
+        path = "/usr/share";
+    }
+    commands[0][2] = (char *)path;
+    snprintf(first_label, sizeof(first_label), "du -sh %s", path);
+    labels[0] = first_label;
+    labels[1] = "ls -l";
+    labels[2] = "ps";
 
     for (index = 0; index < 3; index++) {
         pid_t child = xfork();

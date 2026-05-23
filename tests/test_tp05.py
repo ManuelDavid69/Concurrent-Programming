@@ -14,19 +14,29 @@ import pytest
 from conftest import ROOT, binary, run
 
 
-def test_simultaneous_commands_are_all_started() -> None:
-    result = run([binary("tp05", "simultane")], timeout=30)
-    assert "Lancé: du -sh /usr/share" in result.stdout
+def test_simultaneous_commands_are_all_started(tmp_path: Path) -> None:
+    (tmp_path / "sample.txt").write_text("sample\n", encoding="ascii")
+    result = run(
+        [binary("tp05", "simultane")],
+        env={"SIMULTANE_PATH": str(tmp_path)},
+        timeout=30,
+    )
+    assert f"Lancé: du -sh {tmp_path}" in result.stdout
     assert "Lancé: ls -l" in result.stdout
     assert "Lancé: ps" in result.stdout
     assert result.returncode == 0
 
 
-def test_successive_commands_are_ordered() -> None:
-    result = run([binary("tp05", "successif")], timeout=30)
+def test_successive_commands_are_ordered(tmp_path: Path) -> None:
+    (tmp_path / "sample.txt").write_text("sample\n", encoding="ascii")
+    result = run(
+        [binary("tp05", "successif")],
+        env={"SIMULTANE_PATH": str(tmp_path)},
+        timeout=30,
+    )
     lines = [line for line in result.stdout.splitlines() if line.startswith(("Lancé:", "Terminé:", "Échec:"))]
-    assert lines[0].startswith("Lancé: du")
-    assert lines[1] == "Terminé: du -sh /usr/share"
+    assert lines[0].startswith(f"Lancé: du -sh {tmp_path}")
+    assert lines[1] == f"Terminé: du -sh {tmp_path}"
     assert lines[2].startswith("Lancé: ls")
     assert lines[3] == "Terminé: ls -l"
     assert lines[4].startswith("Lancé: ps")

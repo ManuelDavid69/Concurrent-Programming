@@ -20,6 +20,10 @@ All three children are created before the first `waitpid`.  The parent prints
 `Lancé` for each pid, then waits in a fixed order and prints `Terminé`.  The
 three commands genuinely overlap.
 
+`SIMULTANE_PATH` replaces `/usr/share` in the `du` command; the default is the
+path from the statement.  The tests use a small temporary directory so that
+they do not depend on the size of `/usr/share` on the machine.
+
 ### `successif` — `du -sh /usr/share ; ls -l ; ps`
 
 The loop forks one child, waits for it, prints the result, and only then starts
