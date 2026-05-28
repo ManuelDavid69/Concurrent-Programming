@@ -1,4 +1,4 @@
-name: C CI
+name: CI C
 
 on:
   push:
@@ -11,22 +11,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Récupération du dépôt
         uses: actions/checkout@v4
 
-      - name: Install the toolchain
+      - name: Installation de la chaîne de compilation
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential imagemagick wget python3-pip
 
-      - name: Build with warnings treated as errors
+      - name: Compilation avec les avertissements traités comme des erreurs
         run: make check
 
-      - name: Install the test runner
+      - name: Installation du lanceur de tests
         run: python3 -m pip install --user pytest
 
-      - name: Run the integration test suite
+      - name: Exécution de la suite de tests d’intégration
         run: python3 -m pytest -q
 
-      - name: Clean the build tree
+      - name: Nettoyage de l’arbre de compilation
         run: make clean

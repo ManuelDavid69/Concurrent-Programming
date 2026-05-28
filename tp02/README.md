@@ -1,8 +1,8 @@
-# TP 2 — Binary heap and heap sort
+# TP 2 — Tas binaire et tri par tas
 
-`bin/tas` builds a min-heap by successive insertions, displays it in three
-formats and extracts every element in increasing order.  `--sort` uses an
-in-place max-heap sort on the same values.
+`bin/tas` construit un tas-min par insertions successives, l'affiche dans trois
+formats et extrait chaque élément par ordre croissant. `--sort` utilise un tri
+par tas-max en place sur les mêmes valeurs.
 
 ```bash
 make
@@ -12,9 +12,9 @@ make
 ./bin/tas --sort 7 3 9 1 5
 ```
 
-The heap is stored in an array: the left child of index `i` is `2i + 1`, the
-right child is `2i + 2`, and the parent is `(i - 1) / 2`.  Insertion appends
-the value and sifts it up; extraction replaces the root with the last value
-and sifts it down.  Both operations are `O(log n)`, and building the heap by
-insertions is `O(n log n)`.  Heap sort is in place and runs in `O(n log n)` in
-all cases.
+Le tas est stocké dans un tableau : l'enfant gauche de l'indice `i` est
+`2i + 1`, l'enfant droit est `2i + 2`, et le parent est `(i - 1) / 2`.
+L'insertion ajoute la valeur et la fait remonter ; l'extraction remplace la
+racine par la dernière valeur et la fait descendre. Les deux opérations sont en
+`O(log n)`, et construire le tas par insertions est en `O(n log n)`. Le tri par
+tas est en place et s'exécute en `O(n log n)` dans tous les cas.

@@ -8,8 +8,8 @@
 #include <unistd.h>
 
 /*
- * Equivalent of: du -sh /usr/share ; ls -l ; ps
- * Each command is awaited before the next one is started.
+ * Équivalent de : du -sh /usr/share ; ls -l ; ps
+ * Chaque commande est attendue avant que la suivante ne soit lancée.
  */
 int main(void)
 {

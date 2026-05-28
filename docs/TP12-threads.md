@@ -1,21 +1,18 @@
-# TP 12 — POSIX threads
+# TP 12 — Threads POSIX
 
-## Objectives
+## Objectifs
 
-- create and join POSIX threads;
-- implement a rendezvous with a mutex and a condition variable, then with a
-  barrier;
-- implement a bounded producer/consumer with condition variables;
-- adapt the three-process exchange to three threads;
-- parallelise the Mandelbrot computation and measure the speed-up.
+- créer et joindre (join) des threads POSIX ;
+- implémenter un rendez-vous avec un mutex et une variable de condition, puis avec une barrière ;
+- implémenter un producteur/consommateur borné avec des variables de condition ;
+- adapter l'échange à trois processus à trois threads ;
+- paralléliser le calcul de Mandelbrot et mesurer l'accélération.
 
-Threads share the address space: the data is directly accessible, but every
-shared mutable variable must be protected.  A condition variable always comes
-with a mutex, and the predicate is checked in a `while` loop (not an `if`).
+Les threads partagent l'espace d'adressage : les données sont directement accessibles, mais toute variable mutable partagée doit être protégée. Une variable de condition s'accompagne toujours d'un mutex, et le prédicat est vérifié dans une boucle `while` (et non un `if`).
 
 ---
 
-## 1. Rendezvous without a barrier (`rendezvous_sem`)
+## 1. Rendez-vous sans barrière (`rendezvous_sem`)
 
 ```c
 lock(mutex);
@@ -32,32 +29,23 @@ if (state->arrived == parties) {
 unlock(mutex);
 ```
 
-The generation counter avoids the classic bug where a fast thread arrives for
-the next round and is woken by the broadcast of the previous one.  A thread
-only leaves when the generation it observed has changed, which means that the
-last participant of its round has arrived.
+Le compteur de génération évite le bug classique où un thread rapide arrive pour le tour suivant et est réveillé par la diffusion du précédent. Un thread ne sort que lorsque la génération qu'il a observée a changé, ce qui signifie que le dernier participant de son tour est arrivé.
 
-`parties` is passed on the command line; the same program works for any number
-of threads.
+`parties` est passé sur la ligne de commande ; le même programme fonctionne pour n'importe quel nombre de threads.
 
 ---
 
-## 2. Rendezvous with a barrier (`rendezvous_barrier`)
+## 2. Rendez-vous avec barrière (`rendezvous_barrier`)
 
-`pthread_barrier_t` implements exactly the same semantics: each thread calls
-`pthread_barrier_wait` and blocks until all `parties` threads have arrived.
-The barrier is initialised with the number of participants and destroyed after
-the joins.
+`pthread_barrier_t` implémente exactement la même sémantique : chaque thread appelle `pthread_barrier_wait` et se bloque jusqu'à ce que les `parties` threads soient arrivés. La barrière est initialisée avec le nombre de participants et détruite après les jointures.
 
-The two versions produce the same output ordering: every `avant` line is
-printed before any `après` line.
+Les deux versions produisent le même ordre de sortie : chaque ligne `avant` est affichée avant toute ligne `après`.
 
 ---
 
-## 3. Producer/consumer (`prodcons`)
+## 3. Producteur/consommateur (`prodcons`)
 
-The shared buffer is a circular array of `capacity` integers.  Three
-synchronisation objects are used:
+Le tampon partagé est un tableau circulaire de `capacity` entiers. Trois objets de synchronisation sont utilisés :
 
 ```c
 pthread_mutex_t mutex;
@@ -65,59 +53,41 @@ pthread_cond_t not_empty;
 pthread_cond_t not_full;
 ```
 
-- a producer waits while `count == capacity`, writes at `tail`, signals
-  `not_empty`;
-- a consumer waits while `count == 0` **and** some producer is still running,
-  reads at `head`, signals `not_full`;
-- the last producer increments `producers_done` and broadcasts `not_empty`,
-  which lets every consumer leave once the buffer is empty.
+- un producteur attend tant que `count == capacity`, écrit à `tail`, signale `not_empty` ;
+- un consommateur attend tant que `count == 0` **et** qu'un producteur tourne encore, lit à `head`, signale `not_full` ;
+- le dernier producteur incrémente `producers_done` et diffuse `not_empty`, ce qui permet à chaque consommateur de sortir une fois le tampon vide.
 
-The FIFO order follows from the circular indices.  With 4 producers, 3
-consumers, a capacity of 2 and 25 items per producer, exactly 100 items are
-produced and consumed.
+L'ordre FIFO découle des indices circulaires. Avec 4 producteurs, 3 consommateurs, une capacité de 2 et 25 éléments par producteur, exactement 100 éléments sont produits et consommés.
 
 ---
 
-## 4. Thread value exchange (`echange`)
+## 4. Échange de valeurs entre threads (`echange`)
 
-The protocol is the same as TP 10, but the three tables and the three cells are
-in the same address space:
+Le protocole est le même qu'au TP 10, mais les trois tableaux et les trois cellules sont dans le même espace d'adressage :
 
-- T1 writes its maximum in cell 0 and posts `p1_ready`;
-- T2 writes its minimum in cell 1 and posts `p2_ready`;
-- T0 waits for both, swaps the cells (or sets cell 2 to `-1`), and posts
-  **one separate response semaphore per thread**.
+- T1 écrit son maximum dans la cellule 0 et fait un post sur `p1_ready` ;
+- T2 écrit son minimum dans la cellule 1 et fait un post sur `p2_ready` ;
+- T0 attend les deux, échange les cellules (ou met la cellule 2 à `-1`), et fait un post sur **un sémaphore de réponse distinct par thread**.
 
-Using two response semaphores is important: with a single counting semaphore
-posted twice, one thread could consume both tokens and read a cell that it has
-already overwritten, which breaks the protocol.  With `p0_to_p1` and
-`p0_to_p2`, each thread receives exactly one response per round.
+Utiliser deux sémaphores de réponse est important : avec un seul sémaphore compteur posté deux fois, un thread pourrait consommer les deux jetons et lire une cellule qu'il a déjà écrasée, ce qui casse le protocole. Avec `p0_to_p1` et `p0_to_p2`, chaque thread reçoit exactement une réponse par tour.
 
-The initial tables are `{20..90}` and `{1..8}`; after eight exchanges T1 holds
-`{1..8}` and T2 holds `{20..90}`.
+Les tableaux initiaux sont `{20..90}` et `{1..8}` ; après huit échanges, T1 détient `{1..8}` et T2 détient `{20..90}`.
 
 ---
 
 ## 5. Mandelbrot (`fractale`)
 
-The image is split by rows: thread `i` handles rows `i, i + N, i + 2N, ...`.
-Each thread calls the unchanged `calcul(x, y, pixel)` function; two threads
-never write the same pixel, so no lock is needed.  The only shared state is the
-image buffer, written at disjoint offsets.
+L'image est découpée par lignes : le thread `i` traite les lignes `i, i + N, i + 2N, ...`. Chaque thread appelle la fonction `calcul(x, y, pixel)` inchangée ; deux threads n'écrivent jamais le même pixel, donc aucun verrou n'est nécessaire. Le seul état partagé est le tampon d'image, écrit à des décalages disjoints.
 
-The program prints the size, the number of threads and the wall-clock time.
-On a typical machine, running the 800×600 image with 4 threads is about three
-to four times faster than with 1 thread, depending on the number of cores and
-on the amount of black (expensive) pixels.
+Le programme affiche la taille, le nombre de threads et le temps d'horloge murale. Sur une machine typique, l'exécution de l'image 800×600 avec 4 threads est environ trois à quatre fois plus rapide qu'avec 1 thread, selon le nombre de cœurs et la quantité de pixels noirs (coûteux).
 
-![Mandelbrot rendered with four threads](images/fractale.png)
+![Mandelbrot rendu avec quatre threads](images/fractale.png)
 
-The output is deterministic: the 1-thread and 4-thread images are byte-for-byte
-identical, which the test suite checks.
+La sortie est déterministe : les images à 1 thread et à 4 threads sont identiques octet pour octet, ce que la suite de tests vérifie.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp12
@@ -130,6 +100,4 @@ make -C tp12
 python3 -m pytest tests/test_tp12.py -q
 ```
 
-The tests check the barrier ordering, the exact number of produced and consumed
-items, the separation of the two tables, and the equality of the single- and
-multi-threaded Mandelbrot images.
+Les tests vérifient l'ordre de la barrière, le nombre exact d'éléments produits et consommés, la séparation des deux tableaux, et l'égalité des images Mandelbrot mono- et multi-thread.

@@ -1,33 +1,34 @@
-# TP 9 — Signals
+# TP 9 — Signaux
 
-| Program | Purpose |
+| Programme | Objectif |
 |---|---|
-| `bin/exo1` | interrupt an infinite loop with `SIGINT` |
-| `bin/exo2` | ignore `SIGINT`; stop it with `SIGKILL` |
-| `bin/exo3` | clean stop through a `volatile sig_atomic_t` flag |
-| `bin/exo4` | parent sends `SIGKILL` to its child after three iterations |
-| `bin/exo5` | the child intercepts `SIGINT` while the parent exits |
-| `bin/exo6` | `SIGUSR1`/`SIGUSR2` communication between parent and child |
-| `bin/exo7` | read an integer before a five-second `SIGALRM` timeout |
+| `bin/exo1` | interrompre une boucle infinie avec `SIGINT` |
+| `bin/exo2` | ignorer `SIGINT` ; l'arrêter avec `SIGKILL` |
+| `bin/exo3` | arrêt propre via un drapeau `volatile sig_atomic_t` |
+| `bin/exo4` | le père envoie `SIGKILL` à son enfant après trois itérations |
+| `bin/exo5` | l'enfant intercepte `SIGINT` pendant que le père se termine |
+| `bin/exo6` | communication `SIGUSR1`/`SIGUSR2` entre père et enfant |
+| `bin/exo7` | lire un entier avant un délai d'expiration de cinq secondes via `SIGALRM` |
 
 ```bash
 make
 ./bin/exo1          # Ctrl+C
-./bin/exo2          # Ctrl+C does nothing; use kill -KILL <pid>
-./bin/exo3          # Ctrl+C performs a clean stop
+./bin/exo2          # Ctrl+C ne fait rien ; utiliser kill -KILL <pid>
+./bin/exo3          # Ctrl+C effectue un arrêt propre
 ./bin/exo4
-./bin/exo5          # Ctrl+C: the child survives
+./bin/exo5          # Ctrl+C : le fils survit
 ./bin/exo6
 ./bin/exo7
 ```
 
-Important points:
+Points importants :
 
-- a `volatile sig_atomic_t` flag is the only state a handler should write;
-- `write` is async-signal-safe, `printf` is not;
-- `sa_flags = 0` avoids `SA_RESTART`, which is what allows `fgets` to return
-  and the timeout to be noticed;
-- `SIGKILL` and `SIGSTOP` cannot be caught or ignored;
-- signals are delivered to the foreground process group, so `Ctrl+C` reaches
-  both the parent and the child in `exo5`; the parent dies, the child catches
-  the signal and continues.
+- un drapeau `volatile sig_atomic_t` est le seul état qu'un gestionnaire doit
+  écrire ;
+- `write` est sûr en contexte de signal asynchrone, `printf` ne l'est pas ;
+- `sa_flags = 0` évite `SA_RESTART`, ce qui permet à `fgets` de revenir et au
+  délai d'expiration d'être remarqué ;
+- `SIGKILL` et `SIGSTOP` ne peuvent être ni interceptés ni ignorés ;
+- les signaux sont délivrés au groupe de processus de premier plan, donc `Ctrl+C`
+  atteint à la fois le père et l'enfant dans `exo5` ; le père meurt, l'enfant
+  capture le signal et continue.

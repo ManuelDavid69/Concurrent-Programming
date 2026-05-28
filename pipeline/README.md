@@ -1,6 +1,6 @@
-# Graphics pipeline — threads and barriers
+# Pipeline graphique — threads et barrières
 
-A software rendering pipeline with three stages:
+Un pipeline de rendu logiciel à trois étapes :
 
 ```
 triangle creator -> triangle buffer -> rasterisers -> fragment buffer -> shaders -> image
@@ -12,20 +12,20 @@ make
 ./bin/pipeline 1 1 small.ppm
 ```
 
-- one triangle-creator thread (the main thread) generates a procedural torus;
-- several rasteriser threads turn triangles into fragments;
-- several shader threads apply the z-buffer and write the pixels;
-- bounded queues connect the stages.
+- un thread créateur de triangles (le thread principal) génère un tore procédural ;
+- plusieurs threads rastériseurs transforment les triangles en fragments ;
+- plusieurs threads shaders appliquent le z-buffer et écrivent les pixels ;
+- des files bornées relient les étapes.
 
-Whenever the scene changes colour, the creator inserts a synchronisation
-point.  All stages drain their queues and meet at a `pthread_barrier_t`, which
-guarantees that no triangle or fragment from the previous colour is shaded
-after the change.  This is what removes the tearing visible in the
-unsynchronised version.
+À chaque fois que la scène change de couleur, le créateur insère un point de
+synchronisation. Toutes les étapes vident leurs files et se retrouvent à une
+`pthread_barrier_t`, ce qui garantit qu'aucun triangle ni fragment de la couleur
+précédente n'est ombré après le changement. C'est ce qui supprime le déchirement
+(tearing) visible dans la version non synchronisée.
 
-`gpu.c` contains the graphics primitives (scene generation, rasterisation and
-shading) and must not be modified; only `pipeline.c` contains the
-synchronisation logic.
+`gpu.c` contient les primitives graphiques (génération de scène, rastérisation et
+ombrage) et ne doit pas être modifié ; seul `pipeline.c` contient la logique de
+synchronisation.
 
-The output is a 640×480 P6 PPM file.  The number of rasteriser and shader
-threads is configurable; both must be at least one.
+La sortie est un fichier PPM P6 de 640×480. Le nombre de threads rastériseurs et
+shaders est configurable ; les deux doivent être au moins égaux à un.

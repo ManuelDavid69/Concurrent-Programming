@@ -5,10 +5,10 @@
 #include <stddef.h>
 
 /*
- * Min-heap stored in an array.  For a node at index i:
- *   left child  = 2 * i + 1
- *   right child = 2 * i + 2
- *   parent      = (i - 1) / 2
+ * Tas-min stocké dans un tableau.  Pour un nœud à l'indice i :
+ *   enfant gauche = 2 * i + 1
+ *   enfant droit  = 2 * i + 2
+ *   parent        = (i - 1) / 2
  */
 typedef struct {
     int *data;
@@ -30,7 +30,7 @@ bool tas_racine(const Tas *tas, int *value);
 bool tas_est_valide(const Tas *tas);
 void tas_afficher(const Tas *tas, TasAffichage mode);
 
-/* In-place heap sort (ascending order) using a max-heap. */
+/* Tri par tas sur place (ordre croissant) à l'aide d'un tas-max. */
 void tri_par_tas(int *values, size_t length);
 
 #endif

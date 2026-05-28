@@ -1,38 +1,39 @@
-# Code analysis — answers
+# Analyse du code — réponses
 
-The three programs are compiled as `bin/analyse-cas1`, `bin/analyse-cas2`,
-`bin/analyse-cas2-ordonne` and `bin/analyse-cas3`.  The full reasoning is in
-[`../../docs/TP04-arguments-fork.md`](../../docs/TP04-arguments-fork.md);
-this page is the short answer sheet.
+Les trois programmes sont compilés en `bin/analyse-cas1`, `bin/analyse-cas2`,
+`bin/analyse-cas2-ordonne` et `bin/analyse-cas3`. Le raisonnement complet se
+trouve dans [`../../docs/TP04-arguments-fork.md`](../../docs/TP04-arguments-fork.md) ;
+cette page est la fiche de réponses courte.
 
-## Case 1
+## Cas 1
 
-- The `if` block runs in the **parent** (`fork()` returned a positive pid).
-- Not deterministic in order.  Possible output: `8 6 4 2 0` (any permutation
-  of the set `{0, 2, 4, 6, 8}` is possible in principle).
-- Make it deterministic by waiting for the child before printing; the deepest
-  child then prints `0` first: `0 8 6 4 2`.
-- `fork()` can fail with `EAGAIN` (process limit) or `ENOMEM`.
+- Le bloc `if` s'exécute dans le **père** (`fork()` a renvoyé un pid positif).
+- L'ordre n'est pas déterministe. Sortie possible : `8 6 4 2 0` (toute
+  permutation de l'ensemble `{0, 2, 4, 6, 8}` est possible en principe).
+- Pour le rendre déterministe, il faut attendre l'enfant avant d'afficher ; le
+  fils le plus profond affiche alors `0` en premier : `0 8 6 4 2`.
+- `fork()` peut échouer avec `EAGAIN` (limite de processus) ou `ENOMEM`.
 
-## Case 2
+## Cas 2
 
-- Process tree: a chain `A -> B -> C -> D -> E`.
-- Not deterministic because of the random `sleep`.
-- To print `E D C B A`, each parent waits for its child before printing its own
-  letter (see `cas2_ordonne.c`).
+- Arbre de processus : une chaîne `A -> B -> C -> D -> E`.
+- Non déterministe à cause du `sleep` aléatoire.
+- Pour afficher `E D C B A`, chaque père attend son fils avant d'afficher sa
+  propre lettre (voir `cas2_ordonne.c`).
 
-## Case 3
+## Cas 3
 
-- The initial process creates four children and waits for all of them.
-- Each child sums one quarter of `tab`; the quarters sum to `100`, `125`,
-  `100`, `125`.
-- The order of the four sums is not deterministic.
-- `Calculs terminés` is printed after the four `wait`, so it is last.
+- Le processus initial crée quatre enfants et les attend tous.
+- Chaque enfant additionne un quart de `tab` ; les quarts totalisent `100`,
+  `125`, `100`, `125`.
+- L'ordre des quatre sommes n'est pas déterministe.
+- `Calculs terminés` est affiché après les quatre `wait`, il est donc en
+  dernier.
 
-## General conclusion
+## Conclusion générale
 
-`fork()` duplicates the process, including its current loop state.  Without a
-condition, a loop creates an exponential number of processes.  `wait` and
-`waitpid` are required to reap children and to order a parent after its
-children, and scheduling still makes concurrent output non-deterministic
-unless explicit synchronisation is added.
+`fork()` duplique le processus, y compris l'état courant de sa boucle. Sans
+condition, une boucle crée un nombre exponentiel de processus. `wait` et
+`waitpid` sont nécessaires pour récupérer les enfants et pour ordonner un père
+après ses enfants ; l'ordonnancement rend de toute façon la sortie concurrente
+non déterministe tant qu'aucune synchronisation explicite n'est ajoutée.

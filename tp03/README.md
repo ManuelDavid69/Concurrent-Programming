@@ -1,15 +1,16 @@
-# TP 3 — Image processing and state machines
+# TP 3 — Traitement d'images et automates
 
-## Blur (`bin/flou`)
+## Flou (`bin/flou`)
 
 ```bash
 make
 ./bin/flou sample.ppm out.ppm
 ```
 
-The program reads a P3 or P6 PPM file, applies a 3×3 mean filter and writes a
-P6 file.  Border pixels use the *kernel crop* strategy: only the neighbours
-that actually exist are averaged, so the output keeps the input dimensions.
+Le programme lit un fichier PPM P3 ou P6, applique un filtre moyen 3×3 et écrit
+un fichier P6. Les pixels de bord utilisent la stratégie de *kernel crop* : seuls
+les voisins qui existent réellement sont moyennés, de sorte que la sortie
+conserve les dimensions de l'entrée.
 
 ## Digicode (`bin/digicode`)
 
@@ -20,9 +21,10 @@ printf '7A8267B' | ./bin/digicode 8267B
 ./bin/digicode 5551 --trace
 ```
 
-The first two variants use a KMP automaton, which handles repeated digits
-correctly (`5551`).  The third variant accumulates digits between two
-validation letters: `7A8267B` is valid because the first attempt is rejected,
-while `78267B` is not because the initial `7` belongs to the same attempt.
+Les deux premières variantes utilisent un automate KMP, qui gère correctement
+les chiffres répétés (`5551`). La troisième variante accumule les chiffres entre
+deux lettres de validation : `7A8267B` est valide car la première tentative est
+rejetée, tandis que `78267B` ne l'est pas car le `7` initial appartient à la même
+tentative.
 
-`bin/table` prints the transition tables used by the automata.
+`bin/table` affiche les tables de transition utilisées par les automates.

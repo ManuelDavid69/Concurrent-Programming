@@ -29,7 +29,7 @@ static void swap(int *left, int *right)
     *right = temporary;
 }
 
-/* Moves the element at index up until its parent is smaller or equal. */
+/* Remonte l'élément à l'indice donné jusqu'à ce que son parent soit plus petit ou égal. */
 static void remonter(Tas *tas, size_t index)
 {
     while (index > 0) {
@@ -42,7 +42,7 @@ static void remonter(Tas *tas, size_t index)
     }
 }
 
-/* Moves the element at index down until both children are larger or equal. */
+/* Descend l'élément à l'indice donné jusqu'à ce que ses deux enfants soient plus grands ou égaux. */
 static void descendre(Tas *tas, size_t index)
 {
     for (;;) {
@@ -224,11 +224,11 @@ void tri_par_tas(int *values, size_t length)
     if (length < 2) {
         return;
     }
-    /* Build a max-heap in place. */
+    /* Construit un tas-max sur place. */
     for (index = length / 2; index > 0; index--) {
         descendre_max(values, length, index - 1);
     }
-    /* Move the maximum to the end, then restore the heap on the prefix. */
+    /* Déplace le maximum à la fin, puis restaure le tas sur le préfixe. */
     for (index = length; index > 1; index--) {
         swap(&values[0], &values[index - 1]);
         descendre_max(values, index - 1, 0);

@@ -1,6 +1,6 @@
-# TP 11 — Shared-memory applications
+# TP 11 — Applications de mémoire partagée
 
-## Calculator (`bin/client`, `bin/serveur`)
+## Calculatrice (`bin/client`, `bin/serveur`)
 
 ```bash
 make
@@ -12,12 +12,13 @@ kill -INT %1 %2 %3       # servers stop on SIGINT
 ./bin/clean
 ```
 
-A single request queue is shared by all clients, and each client has a result
-slot protected by its own semaphore.  Several servers dequeue requests
-concurrently and write the response to `results[client_id]`; the matching
-result semaphore wakes the right client.
+Une file de requêtes unique est partagée par tous les clients, et chaque client
+dispose d'un emplacement de résultat protégé par son propre sémaphore. Plusieurs
+serveurs défilent les requêtes concurremment et écrivent la réponse dans
+`results[client_id]` ; le sémaphore de résultat correspondant réveille le bon
+client.
 
-## Parallel image processing (`bin/client_image`, `bin/serveur_image`)
+## Traitement d'images parallèle (`bin/client_image`, `bin/serveur_image`)
 
 ```bash
 ./bin/init
@@ -26,11 +27,11 @@ result semaphore wakes the right client.
 wait
 ```
 
-The five task slots are protected by the `slots`/`items` semaphores; a server
-takes one path, blurs the PPM image and writes the result to the output
-directory.  Without `--drain` the servers run until `SIGINT`, as required by
-the statement; `--drain` is a convenience for scripts and tests: the server
-exits once the queue is empty and every client has finished.
+Les cinq emplacements de tâches sont protégés par les sémaphores `slots`/`items` ;
+un serveur prend un chemin, floute l'image PPM et écrit le résultat dans le
+répertoire de sortie. Sans `--drain`, les serveurs tournent jusqu'à `SIGINT`,
+comme l'exige l'énoncé ; `--drain` est un confort pour les scripts et les tests :
+le serveur se termine une fois la file vide et tous les clients terminés.
 
-`init` and `clean` manage the resources of both parts.  The image client must
-use the same output directory as the servers.
+`init` et `clean` gèrent les ressources des deux parties. Le client d'images doit
+utiliser le même répertoire de sortie que les serveurs.

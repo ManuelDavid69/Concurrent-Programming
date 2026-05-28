@@ -1,34 +1,26 @@
-# TP 4 — Arguments, `fork` and `wait`
+# TP 4 — Arguments, `fork` et `wait`
 
-## Objectives
+## Objectifs
 
-- read and validate command-line arguments;
-- understand that `fork()` duplicates the current process, including its
-  instruction pointer, variables and open descriptors;
-- draw process trees;
-- use `wait`/`waitpid` to reap children and collect exit codes;
-- make a concurrent display deterministic without giving up concurrency.
-
----
-
-## 1. `miroir` and `moyenne`
-
-`miroir` reverses each argument in place with two indices.  It modifies
-`argv[i]` directly, which is allowed because the strings are writable in a
-normal `main`.
-
-`moyenne` uses the strict parser from `common` and rejects anything that is
-not an integer in `[0, 20]`.  In particular `3.5`, `toto` and `22` produce
-`Note(s) non valide(s)`; no argument produces the message from the statement.
-The average is computed as a `double` and printed with `%.2f`.
+- lire et valider les arguments de la ligne de commande ;
+- comprendre que `fork()` duplique le processus courant, y compris son pointeur d'instruction, ses variables et ses descripteurs ouverts ;
+- dessiner des arbres de processus ;
+- utiliser `wait`/`waitpid` pour récupérer les enfants et collecter les codes de sortie ;
+- rendre un affichage concurrent déterministe sans renoncer au parallélisme.
 
 ---
 
-## 2. `fork` in a loop (`boucle`)
+## 1. `miroir` et `moyenne`
 
-The program calls `fork()` three times with no `if` and no `break`.  Every
-process therefore continues the loop, and the number of processes doubles at
-each iteration.
+`miroir` inverse chaque argument en place à l'aide de deux indices. Il modifie directement `argv[i]`, ce qui est autorisé car les chaînes sont modifiables dans un `main` normal.
+
+`moyenne` utilise l'analyseur strict de `common` et rejette tout ce qui n'est pas un entier dans `[0, 20]`. En particulier, `3.5`, `toto` et `22` produisent `Note(s) non valide(s)` ; aucun argument produit le message de l'énoncé. La moyenne est calculée en `double` et affichée avec `%.2f`.
+
+---
+
+## 2. `fork` dans une boucle (`boucle`)
+
+Le programme appelle `fork()` trois fois sans `if` ni `break`. Chaque processus poursuit donc la boucle, et le nombre de processus double à chaque itération.
 
 ```
 iteration 0:            P0
@@ -38,54 +30,42 @@ iteration 1:            P0 -- C1
 iteration 2:      P0 -- C2     C1 -- C3
 ```
 
-The **process tree** is a complete binary tree of depth 3: 8 processes in
-total.  Each process prints at every iteration it executes:
+L'**arbre de processus** est un arbre binaire complet de profondeur 3 : 8 processus au total. Chaque processus affiche une ligne à chaque itération qu'il exécute :
 
-| Created at | Prints at | Number of lines |
+| Créé à | Affiche à | Nombre de lignes |
 |---|---|---|
-| before the loop (root) | 0, 1, 2 | 3 |
-| iteration 0 (1 process) | 0, 1, 2 | 3 |
-| iteration 1 (2 processes) | 1, 2 | 4 |
-| iteration 2 (4 processes) | 2 | 4 |
+| avant la boucle (racine) | 0, 1, 2 | 3 |
+| itération 0 (1 processus) | 0, 1, 2 | 3 |
+| itération 1 (2 processus) | 1, 2 | 4 |
+| itération 2 (4 processus) | 2 | 4 |
 | **total** | | **14** |
 
-The exact interleaving of the 14 lines depends on the scheduler.  The root's
-lines have the same pid and different loop counters; a child's first line has
-the same counter as the iteration during which it was forked, and its `fork`
-return value is `0`.
+L'entrelacement exact des 14 lignes dépend de l'ordonnanceur. Les lignes de la racine ont le même pid et des compteurs de boucle différents ; la première ligne d'un enfant a le même compteur que l'itération durant laquelle il a été créé par fork, et sa valeur de retour de `fork` vaut `0`.
 
-`wait(NULL)` at the end only reaps the process's own children; every process
-runs that loop, so the whole tree is reaped.
+`wait(NULL)` à la fin ne récupère que les enfants directs du processus ; comme chaque processus exécute cette boucle, tout l'arbre est récupéré.
 
 ---
 
 ## 3. `wait`
 
-The parent creates all N children first, then calls `waitpid(-1, ...)` in a
-loop.  Each child:
+Le parent crée d'abord les N enfants, puis appelle `waitpid(-1, ...)` dans une boucle. Chaque enfant :
 
-- prints its pid and its parent's pid;
-- sleeps `2 * i` seconds (scaled by `PC_SLEEP_SCALE` in the tests);
-- prints that it resumes;
-- exits with code `i`.
+- affiche son pid et celui de son parent ;
+- dort `2 * i` secondes (mis à l'échelle par `PC_SLEEP_SCALE` dans les tests) ;
+- affiche qu'il reprend ;
+- se termine avec le code `i`.
 
-The parent prints the pid and the exit status of each child as soon as one
-terminates.
+Le parent affiche le pid et le statut de sortie de chaque enfant dès que l'un d'eux se termine.
 
-**Is the program deterministic?**  The set of messages and exit codes is
-deterministic, but the order of the parent's `wait` returns is not guaranteed:
-it depends on scheduling, even though the increasing sleeps make the order
-`0, 1, 2, ...` very likely.  To make it fully deterministic, the parent could
-wait for a specific pid (`waitpid(children[i], ...)`) instead of `-1`.
+**Le programme est-il déterministe ?** L'ensemble des messages et des codes de sortie est déterministe, mais l'ordre des retours de `wait` du parent n'est pas garanti : il dépend de l'ordonnancement, même si les durées de sommeil croissantes rendent l'ordre `0, 1, 2, ...` très probable. Pour le rendre totalement déterministe, le parent pourrait attendre un pid précis (`waitpid(children[i], ...)`) au lieu de `-1`.
 
 ---
 
-## 4. Four children printing `1..200`
+## 4. Quatre enfants affichant `1..200`
 
-### Variant 1 — concurrent
+### Variante 1 — concurrente
 
-Each child prints its own block of 50 numbers.  The blocks are correct but
-their lines can interleave arbitrarily:
+Chaque enfant affiche son propre bloc de 50 nombres. Les blocs sont corrects, mais leurs lignes peuvent s'entrelacer arbitrairement :
 
 ```
 1
@@ -95,22 +75,17 @@ their lines can interleave arbitrarily:
 ...
 ```
 
-### Variant 2 — guaranteed order
+### Variante 2 — ordre garanti
 
-The four children are still created immediately, but each one blocks on a
-private pipe.  The parent writes one token to child 0, waits for it, writes a
-token to child 1, and so on.  The output is exactly `1, 2, ..., 200`, while the
-process creation remains concurrent.
+Les quatre enfants sont toujours créés immédiatement, mais chacun se bloque sur un tube privé. Le parent écrit un jeton à l'enfant 0, attend sa fin, écrit un jeton à l'enfant 1, et ainsi de suite. La sortie est exactement `1, 2, ..., 200`, tandis que la création des processus reste concurrente.
 
-An alternative would be to let each child write into a pipe and have the
-parent concatenate the pipes in order.  The token solution uses less memory
-and demonstrates a one-byte synchronisation message.
+Une alternative consisterait à laisser chaque enfant écrire dans un tube et à faire concaténer les tubes dans l'ordre par le parent. La solution par jetons utilise moins de mémoire et démontre l'usage d'un message de synchronisation d'un octet.
 
 ---
 
-## 5. Code analysis
+## 5. Analyse de code
 
-### Case 1
+### Cas 1
 
 ```c
 for (i = 1; i < 5; i++) {
@@ -123,14 +98,9 @@ for (i = 1; i < 5; i++) {
 printf("%d\n", n);
 ```
 
-- In the `if` block we are in the **parent** (`fork()` returned a positive
-  pid).  The parent breaks out of the loop; the child continues with the next
-  iteration.
-- The program is **not deterministic** in its output order.  The set of
-  printed values is `{0, 2, 4, 6, 8}`: the deepest child (created at `i = 4`)
-  leaves the loop with `n = 0`; its ancestors print `8`, `6`, `4`, `2`.
-  One possible output is `0 8 6 4 2`, another is `8 0 6 4 2`.
-- To make it deterministic, a parent can wait for its child before printing:
+- Dans le bloc `if`, nous sommes dans le **parent** (`fork()` a renvoyé un pid positif). Le parent sort de la boucle ; l'enfant poursuit avec l'itération suivante.
+- Le programme n'est **pas déterministe** dans l'ordre de ses sorties. L'ensemble des valeurs affichées est `{0, 2, 4, 6, 8}` : l'enfant le plus profond (créé à `i = 4`) quitte la boucle avec `n = 0` ; ses ancêtres affichent `8`, `6`, `4`, `2`. Une sortie possible est `0 8 6 4 2`, une autre est `8 0 6 4 2`.
+- Pour le rendre déterministe, un parent peut attendre son enfant avant d'afficher :
 
   ```c
   if (fils_pid > 0) {
@@ -140,28 +110,21 @@ printf("%d\n", n);
   }
   ```
 
-  With this change the deepest child prints first and the output is
-  `0, 8, 6, 4, 2`.
-- `fork()` can fail: `EAGAIN` when the process limit is reached, `ENOMEM`
-  when the kernel cannot allocate the process structures.  It returns `-1`
-  and sets `errno`; the program should test this case.
+  Avec cette modification, l'enfant le plus profond affiche en premier et la sortie est `0, 8, 6, 4, 2`.
+- `fork()` peut échouer : `EAGAIN` lorsque la limite de processus est atteinte, `ENOMEM` lorsque le noyau ne peut pas allouer les structures du processus. Il renvoie `-1` et positionne `errno` ; le programme devrait tester ce cas.
 
-### Case 2
+### Cas 2
 
 ```c
 for (i = 0; i < 4; i++)
     if (fork())
         break;
-/* sleep and print 'A' + i */
+/* dormir puis afficher 'A' + i */
 ```
 
-- Process tree: a **chain** `A -> B -> C -> D -> E`.  At each iteration the
-  parent breaks (and will print its letter), while the child continues the
-  loop.  The last child leaves the loop with `i = 4` and prints `E`.
-- The program is **not deterministic**: each process sleeps for a random
-  number of seconds, so the order of the five lines varies.
-- To obtain `E D C B A` without changing the first lines, each parent must
-  wait for its child before printing:
+- Arbre de processus : une **chaîne** `A -> B -> C -> D -> E`. À chaque itération, le parent sort de la boucle (et affichera sa lettre), tandis que l'enfant poursuit la boucle. Le dernier enfant quitte la boucle avec `i = 4` et affiche `E`.
+- Le programme n'est **pas déterministe** : chaque processus dort pendant un nombre aléatoire de secondes, donc l'ordre des cinq lignes varie.
+- Pour obtenir `E D C B A` sans modifier les premières lignes, chaque parent doit attendre son enfant avant d'afficher :
 
   ```c
   pid_t child = fork();
@@ -172,27 +135,19 @@ for (i = 0; i < 4; i++)
   }
   ```
 
-  The leaf `E` prints first, then its parent `D`, and so on up to `A`.
-  The complete variant is in `analyse/cas2_ordonne.c`.
+  La feuille `E` affiche en premier, puis son parent `D`, et ainsi de suite jusqu'à `A`. La variante complète se trouve dans `analyse/cas2_ordonne.c`.
 
-### Case 3
+### Cas 3
 
-- Process tree: the initial process creates four children and then waits for
-  them.  Each child keeps the value of `i` at the moment of its `fork`, breaks
-  out of the loop, and sums one quarter of `tab`.
-- The parent's `Calculs terminés` is printed **after** the four `wait`, so it
-  is the last line.
-- The order of the four `i somme` lines is **not deterministic**.
-- The quarters are `100`, `125`, `100`, `125` for `i = 0, 1, 2, 3`
-  (`tab[j] = j % 10`).
-- Conclusions: `fork` duplicates the whole process; a condition is needed to
-  give each process a role; `wait` is needed to avoid the parent finishing
-  before its children; and scheduling makes concurrent output
-  non-deterministic unless explicit synchronisation is added.
+- Arbre de processus : le processus initial crée quatre enfants puis les attend. Chaque enfant conserve la valeur de `i` au moment de son `fork`, sort de la boucle et additionne un quart de `tab`.
+- Le `Calculs terminés` du parent est affiché **après** les quatre `wait`, c'est donc la dernière ligne.
+- L'ordre des quatre lignes `i somme` n'est **pas déterministe**.
+- Les quarts valent `100`, `125`, `100`, `125` pour `i = 0, 1, 2, 3` (`tab[j] = j % 10`).
+- Conclusions : `fork` duplique tout le processus ; une condition est nécessaire pour donner un rôle à chaque processus ; `wait` est nécessaire pour éviter que le parent ne termine avant ses enfants ; et l'ordonnancement rend la sortie concurrente non déterministe à moins d'ajouter une synchronisation explicite.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp04
@@ -209,6 +164,4 @@ make -C tp04
 python3 -m pytest tests/test_tp04.py -q
 ```
 
-The tests check the exact messages, the 8-process tree of `boucle`, the 200
-values of both `enfants` variants, the exit codes collected by `wait`, and the
-answers of the three analysis programs.
+Les tests vérifient les messages exacts, l'arbre de 8 processus de `boucle`, les 200 valeurs des deux variantes d'`enfants`, les codes de sortie collectés par `wait`, et les réponses des trois programmes d'analyse.

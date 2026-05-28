@@ -1,17 +1,17 @@
-# TP 11 — Shared-memory applications
+# TP 11 — Applications de la mémoire partagée
 
-## Objectives
+## Objectifs
 
-- build a multi-server calculator with shared memory and semaphores;
-- support several clients sending requests concurrently;
-- return each result to the right client without copying the whole request back;
-- process a batch of images in parallel with a pool of worker processes.
+- construire une calculatrice multi-serveurs avec mémoire partagée et sémaphores ;
+- prendre en charge plusieurs clients envoyant des requêtes simultanément ;
+- renvoyer chaque résultat au bon client sans recopier toute la requête ;
+- traiter un lot d'images en parallèle avec un pool de processus workers.
 
 ---
 
-## 1. Shared-memory calculator
+## 1. Calculatrice à mémoire partagée
 
-### Data layout
+### Organisation des données
 
 ```c
 typedef struct {
@@ -36,56 +36,47 @@ typedef struct {
 } CalcShared;
 ```
 
-One request queue is shared by every client.  Each client also owns a result
-slot and a private semaphore (`CALC_RESULT_BASE + slot`).
+Une file de requêtes est partagée par tous les clients. Chaque client possède également un emplacement de résultat et un sémaphore privé (`CALC_RESULT_BASE + slot`).
 
-### Semaphores
+### Sémaphores
 
-| Semaphore | Initial | Role |
+| Sémaphore | Initial | Rôle |
 |---|---:|---|
-| `CALC_MUTEX` | 1 | protects the queue, the counters and the results |
-| `CALC_SLOTS` | 16 | free places in the request queue |
-| `CALC_ITEMS` | 0 | requests waiting to be processed |
-| `CALC_RESULT_BASE + i` | 0 | result ready for client slot `i` |
+| `CALC_MUTEX` | 1 | protège la file, les compteurs et les résultats |
+| `CALC_SLOTS` | 16 | places libres dans la file de requêtes |
+| `CALC_ITEMS` | 0 | requêtes en attente de traitement |
+| `CALC_RESULT_BASE + i` | 0 | résultat prêt pour l'emplacement client `i` |
 
 ### Client
 
-1. acquire a free slot under the mutex (`client_pid[i] == 0`);
-2. repeat `requests` times:
-   - wait for a free queue slot, append the request, post `items`;
-   - wait on its result semaphore;
-   - read `results[slot]` under the mutex and print it;
-3. release the slot.
+1. acquiert un emplacement libre sous le mutex (`client_pid[i] == 0`) ;
+2. répète `requests` fois :
+   - attend un emplacement libre dans la file, ajoute la requête, fait un post sur `items` ;
+   - attend sur son sémaphore de résultat ;
+   - lit `results[slot]` sous le mutex et l'affiche ;
+3. libère l'emplacement.
 
-The client sends one request and waits for its result before sending the next,
-as required by the statement.
+Le client envoie une requête et attend son résultat avant d'envoyer la suivante, comme demandé par l'énoncé.
 
-### Server
+### Serveur
 
-The server loops:
+Le serveur boucle :
 
-1. wait for `items`;
-2. dequeue under the mutex, post `slots`;
-3. evaluate, write `results[client_id]` under the mutex, post the client's
-   result semaphore.
+1. attend `items` ;
+2. retire de la file sous le mutex, fait un post sur `slots` ;
+3. évalue, écrit `results[client_id]` sous le mutex, fait un post sur le sémaphore de résultat du client.
 
-Several servers can run at the same time; the queue is the only shared
-producer/consumer structure, and the mutex makes dequeue atomic.  A `SIGINT`
-handler sets a flag; the server uses `sem_p_interruptible` so the blocking wait
-returns with `EINTR` and the loop can exit cleanly.
+Plusieurs serveurs peuvent fonctionner en même temps ; la file est la seule structure partagée producteur/consommateur, et le mutex rend le retrait atomique. Un gestionnaire de `SIGINT` positionne un drapeau ; le serveur utilise `sem_p_interruptible` pour que l'attente bloquante revienne avec `EINTR` et que la boucle puisse sortir proprement.
 
-### Why a client identifier?
+### Pourquoi un identifiant de client ?
 
-The result could be sent through a pipe, but here the server needs a fast way
-to find the client's result zone.  The slot index (`0..7`) is that key.  It is
-stable even if the pid is reused by the operating system, and it is smaller
-than a pid.
+Le résultat pourrait être envoyé via un tube, mais ici le serveur a besoin d'un moyen rapide de trouver la zone de résultat du client. L'indice d'emplacement (`0..7`) est cette clé. Il reste stable même si le pid est réutilisé par le système d'exploitation, et il est plus petit qu'un pid.
 
 ---
 
-## 2. Parallel image processing
+## 2. Traitement d'images en parallèle
 
-### Data layout
+### Organisation des données
 
 ```c
 typedef struct {
@@ -96,42 +87,28 @@ typedef struct {
 } ImageShared;
 ```
 
-Five task slots, each able to hold a path of up to 10 000 characters.  A path
-cannot be transmitted as a pointer: the client and the servers are different
-processes, so the characters must be copied into the shared segment.
+Cinq emplacements de tâches, chacun pouvant contenir un chemin de 10 000 caractères maximum. Un chemin ne peut pas être transmis sous forme de pointeur : le client et les serveurs sont des processus différents, donc les caractères doivent être copiés dans le segment partagé.
 
-### Protocol
+### Protocole
 
-- `IMG_SLOTS` (initial 5) and `IMG_ITEMS` (initial 0) implement the bounded
-  queue;
-- the client copies each path into `tasks[tail]`, advances `tail`, posts
-  `items`;
-- a server waits for an item, copies `tasks[head]` into a local buffer,
-  advances `head`, posts `slots`, then processes the file;
-- the client increments `active_clients` when it starts and decrements it when
-  it has enqueued everything; the last client sets `finished`.
+- `IMG_SLOTS` (initial 5) et `IMG_ITEMS` (initial 0) implémentent la file bornée ;
+- le client copie chaque chemin dans `tasks[tail]`, avance `tail`, fait un post sur `items` ;
+- un serveur attend un élément, copie `tasks[head]` dans un tampon local, avance `head`, fait un post sur `slots`, puis traite le fichier ;
+- le client incrémente `active_clients` au démarrage et le décrémente lorsqu'il a tout mis en file ; le dernier client positionne `finished`.
 
-The servers in normal mode run until `SIGINT`, as required.  `--drain` is a
-convenience for scripts and tests: the server polls the queue and exits once
-`finished` is set and the queue is empty.  A server that has already dequeued a
-task finishes that task before exiting.
+Les serveurs en mode normal tournent jusqu'à `SIGINT`, comme demandé. `--drain` est une commodité pour les scripts et les tests : le serveur interroge la file et sort une fois que `finished` est positionné et que la file est vide. Un serveur qui a déjà retiré une tâche la termine avant de sortir.
 
-### Processing
+### Traitement
 
-The server loads the PPM file with the same `image_load` used in TP 3, applies
-the 3×3 kernel-crop blur and saves the result as P6 under the output directory.
-It prints the source and destination paths.
+Le serveur charge le fichier PPM avec le même `image_load` que celui utilisé au TP 3, applique le flou par noyau 3×3 (kernel-crop) et enregistre le résultat en P6 dans le répertoire de sortie. Il affiche les chemins source et destination.
 
-### Results
+### Résultats
 
-With five 4×4 images and two servers, all five outputs are produced.  The
-servers may split the work unevenly (one can process all five if it is
-scheduled first); the requirement is that every file is processed exactly
-once and that the output directory contains exactly the expected files.
+Avec cinq images 4×4 et deux serveurs, les cinq sorties sont produites. Les serveurs peuvent répartir le travail de manière inégale (un seul peut traiter les cinq s'il est ordonnancé en premier) ; l'exigence est que chaque fichier soit traité exactement une fois et que le répertoire de sortie contienne exactement les fichiers attendus.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp11
@@ -146,6 +123,4 @@ wait
 python3 -m pytest tests/test_tp11.py -q
 ```
 
-The tests start two calculator servers, run two clients concurrently, verify
-the arithmetic of every response and the clean `SIGINT` shutdown, then process
-five generated PPM images with two drain-mode servers and check every output.
+Les tests démarrent deux serveurs de calculatrice, lancent deux clients en parallèle, vérifient l'arithmétique de chaque réponse et l'arrêt propre sur `SIGINT`, puis traitent cinq images PPM générées avec deux serveurs en mode drain et contrôlent chaque sortie.

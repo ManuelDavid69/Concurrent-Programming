@@ -1,14 +1,14 @@
-# TP 1 — C refresher
+# TP 1 — Remise à niveau en C
 
-Four small programs warming up dynamic memory, number theory, arrays and
-numerical edge cases.
+Quatre petits programmes pour réviser la mémoire dynamique, la théorie des
+nombres, les tableaux et les cas limites numériques.
 
-| Program | Purpose |
+| Programme | Objectif |
 |---|---|
-| `bin/facteurs` | prime factorisation of one or more integers |
-| `bin/enigme` | look-and-say sequence from an arbitrary first line |
-| `bin/intersection` | intersection of two lines, including vertical, parallel and confounded cases |
-| `bin/tri_insertion` | insertion sort of the integers given on the command line |
+| `bin/facteurs` | factorisation en nombres premiers d'un ou plusieurs entiers |
+| `bin/enigme` | suite look-and-say à partir d'une première ligne arbitraire |
+| `bin/intersection` | intersection de deux droites, y compris les cas vertical, parallèle et confondu |
+| `bin/tri_insertion` | tri par insertion des entiers donnés sur la ligne de commande |
 
 ```bash
 make
@@ -18,6 +18,7 @@ make
 ./bin/tri_insertion -v 5 2 4 6 1 3
 ```
 
-`facteurs` avoids `d * d` overflow by testing `d <= n / d`.  `intersection`
-reports whether the mathematical intersection also lies inside both segments;
-it handles vertical lines separately instead of dividing by a zero slope.
+`facteurs` évite le débordement de `d * d` en testant `d <= n / d`. `intersection`
+indique si l'intersection mathématique se trouve aussi à l'intérieur des deux
+segments ; il traite les droites verticales séparément au lieu de diviser par une
+pente nulle.

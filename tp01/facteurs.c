@@ -7,9 +7,10 @@
 #include <stdlib.h>
 
 /*
- * Smallest divisor greater than one.  Even numbers are handled first, then
- * only odd candidates are tested up to sqrt(n).  The loop condition uses
- * divisor <= n / divisor to avoid overflowing divisor * divisor.
+ * Plus petit diviseur supérieur à un.  Les nombres pairs sont traités en
+ * premier, puis seuls les candidats impairs sont testés jusqu'à sqrt(n).  La
+ * condition de boucle utilise divisor <= n / divisor pour éviter le
+ * débordement de divisor * divisor.
  */
 static long smallest_divisor(long number)
 {

@@ -1,36 +1,34 @@
-# TP 8 — System V semaphores
+# TP 8 — Sémaphores System V
 
-## Objectives
+## Objectifs
 
-- create, initialise and remove a System V semaphore set;
-- use P (wait) and V (post) operations to enforce precedence;
-- implement a rendezvous for two and three processes;
-- implement a 1-emitter / 2-receivers rendezvous with shared counters;
-- discuss how to generalise a rendezvous to N processes.
+- créer, initialiser et supprimer un ensemble de sémaphores System V ;
+- utiliser les opérations P (wait) et V (post) pour imposer une précédence ;
+- implémenter un rendez-vous pour deux et trois processus ;
+- implémenter un rendez-vous 1 émetteur / 2 récepteurs avec des compteurs partagés ;
+- discuter de la généralisation d'un rendez-vous à N processus.
 
 ---
 
-## 1. The semaphore set
+## 1. L'ensemble de sémaphores
 
-`init` removes any stale resource, then creates one set of nine semaphores and
-one shared-memory segment.
+`init` supprime toute ressource obsolète, puis crée un ensemble de neuf sémaphores et un segment de mémoire partagée.
 
-| Index | Semaphore | Initial | Role |
+| Indice | Sémaphore | Initial | Rôle |
 |---:|---|---:|---|
-| 0 | `SEM_FIRST` | 0 | `second` waits for `first` |
-| 1 | `SEM_RDV2_0` | 0 | rendezvous 2, process 0 |
-| 2 | `SEM_RDV2_1` | 0 | rendezvous 2, process 1 |
-| 3 | `SEM_RDV3_0` | 0 | rendezvous 3, process 0 |
-| 4 | `SEM_RDV3_1` | 0 | rendezvous 3, process 1 |
-| 5 | `SEM_RDV3_2` | 0 | rendezvous 3, process 2 |
-| 6 | `SEM_MUTEX` | 1 | protects the shared counters |
-| 7 | `SEM_EMETTEUR` | 0 | emitters waiting for two receivers |
-| 8 | `SEM_RECEPTEUR` | 0 | receivers waiting for a rendezvous |
+| 0 | `SEM_FIRST` | 0 | `second` attend `first` |
+| 1 | `SEM_RDV2_0` | 0 | rendez-vous 2, processus 0 |
+| 2 | `SEM_RDV2_1` | 0 | rendez-vous 2, processus 1 |
+| 3 | `SEM_RDV3_0` | 0 | rendez-vous 3, processus 0 |
+| 4 | `SEM_RDV3_1` | 0 | rendez-vous 3, processus 1 |
+| 5 | `SEM_RDV3_2` | 0 | rendez-vous 3, processus 2 |
+| 6 | `SEM_MUTEX` | 1 | protège les compteurs partagés |
+| 7 | `SEM_EMETTEUR` | 0 | émetteurs en attente de deux récepteurs |
+| 8 | `SEM_RECEPTEUR` | 0 | récepteurs en attente d'un rendez-vous |
 
-`clean` removes both resources.  Running `init` before every test guarantees a
-known state even after a crash.
+`clean` supprime les deux ressources. Lancer `init` avant chaque test garantit un état connu, même après un plantage.
 
-The shared segment contains:
+Le segment partagé contient :
 
 ```c
 typedef struct {
@@ -40,72 +38,56 @@ typedef struct {
 } Etat;
 ```
 
-The counters are protected by `SEM_MUTEX`; the semaphores are used for
-blocking, not for busy waiting.
+Les compteurs sont protégés par `SEM_MUTEX` ; les sémaphores servent au blocage, pas à l'attente active.
 
-> **Why no `SEM_UNDO`?**  `SEM_UNDO` is useful for a lock held by a process
-> that may crash.  For a semaphore used as a **signal**, it is dangerous: if a
-> process posts and exits before the waiter consumes the token, the kernel
-> undoes the post.  Here the programs are short-lived and the resources are
-> reset by `init`, so the wrappers use plain `semop` without `SEM_UNDO`.
+> **Pourquoi pas de `SEM_UNDO` ?** `SEM_UNDO` est utile pour un verrou détenu par un processus susceptible de planter. Pour un sémaphore utilisé comme **signal**, il est dangereux : si un processus fait un post puis se termine avant que l'attenteur ne consomme le jeton, le noyau annule le post. Ici, les programmes sont de courte durée et les ressources sont réinitialisées par `init`, donc les wrappers utilisent un simple `semop` sans `SEM_UNDO`.
 
 ---
 
-## 2. Precedence (`first`, `second`)
+## 2. Précédence (`first`, `second`)
 
-`first` prints, sleeps between 3 and 5 seconds (scaled in tests), prints again,
-then posts `SEM_FIRST`.  `second` prints, waits on `SEM_FIRST`, prints that
-`first` has finished, sleeps 1 to 4 seconds, and prints its final message.
+`first` affiche, dort entre 3 et 5 secondes (mis à l'échelle dans les tests), affiche de nouveau, puis fait un post sur `SEM_FIRST`. `second` affiche, attend `SEM_FIRST`, affiche que `first` a terminé, dort de 1 à 4 secondes, et affiche son message final.
 
-There is no parent/child relationship, and the launch order does not matter:
+Il n'y a pas de relation parent/enfant, et l'ordre de lancement n'a pas d'importance :
 
-- if `second` starts first, it blocks on the semaphore;
-- if `first` starts first, it posts before `second` reaches the wait, and the
-  semaphore keeps the token.
+- si `second` démarre en premier, il se bloque sur le sémaphore ;
+- si `first` démarre en premier, il fait un post avant que `second` n'atteigne l'attente, et le sémaphore conserve le jeton.
 
-The semaphore therefore acts as a one-shot event, not as a lock.
+Le sémaphore agit donc comme un événement ponctuel, et non comme un verrou.
 
 ---
 
-## 3. Rendezvous for two and three processes
+## 3. Rendez-vous pour deux et trois processus
 
-For N participants, the implementation creates one semaphore per participant.
-Participant `i`:
+Pour N participants, l'implémentation crée un sémaphore par participant. Le participant `i` :
 
-1. simulates some work;
-2. posts the semaphore of every other participant;
-3. waits on its own semaphore.
+1. simule un peu de travail ;
+2. fait un post sur le sémaphore de chacun des autres participants ;
+3. attend sur son propre sémaphore.
 
-For N = 2:
+Pour N = 2 :
 
 ```
 P0: post(S1), wait(S0)
 P1: post(S0), wait(S1)
 ```
 
-For N = 3, each process posts the two other semaphores and waits on its own.
-This works because each post is a token that survives until the target waits,
-and no process can pass its own wait before all the others have posted.
+Pour N = 3, chaque processus fait un post sur les deux autres sémaphores et attend sur le sien. Cela fonctionne car chaque post est un jeton qui subsiste jusqu'à ce que la cible attende, et aucun processus ne peut franchir sa propre attente avant que tous les autres aient fait un post.
 
-The model requires N to be known when the semaphores are created.  It also
-uses `N` semaphores and `N` posts per process, i.e. `O(N^2)` posts in total.
-TP 10 replaces it with a barrier based on a shared counter, one mutex and two
-turnstiles, which works for any N supplied at run time and uses `O(1)` posts
-per process.
+Le modèle exige que N soit connu au moment de la création des sémaphores. Il utilise aussi `N` sémaphores et `N` posts par processus, soit `O(N^2)` posts au total. Le TP 10 le remplace par une barrière fondée sur un compteur partagé, un mutex et deux tourniquets, qui fonctionne pour tout N fourni à l'exécution et utilise `O(1)` posts par processus.
 
 ---
 
-## 4. Rendezvous 1 emitter / 2 receivers
+## 4. Rendez-vous 1 émetteur / 2 récepteurs
 
-The emitter must wait until **two** receivers are present.  A receiver must
-wait until there is an emitter **and** another receiver.  The state is:
+L'émetteur doit attendre que **deux** récepteurs soient présents. Un récepteur doit attendre qu'il y ait un émetteur **et** un autre récepteur. L'état est :
 
 ```c
 int emetteurs_attente;
 int recepteurs_attente;
 ```
 
-### Emitter
+### Émetteur
 
 ```
 lock(mutex)
@@ -124,7 +106,7 @@ else
     wait(emetteur);
 ```
 
-### Receiver
+### Récepteur
 
 ```
 lock(mutex)
@@ -144,17 +126,13 @@ else
     wait(recepteur);
 ```
 
-The second receiver is the one that completes the trio: it consumes the
-waiting emitter and the waiting receiver, then wakes both.  If the emitter
-arrives last and finds two receivers, it wakes both directly.
+Le second récepteur est celui qui complète le trio : il consomme l'émetteur en attente et le récepteur en attente, puis réveille les deux. Si l'émetteur arrive en dernier et trouve deux récepteurs, il réveille les deux directement.
 
-Two semaphores are enough because the counters, protected by the mutex, record
-exactly how many processes are blocked; the semaphores only provide the
-passive wait and the wake-up.
+Deux sémaphores suffisent car les compteurs, protégés par le mutex, enregistrent exactement combien de processus sont bloqués ; les sémaphores n'assurent que l'attente passive et le réveil.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp08
@@ -171,6 +149,4 @@ wait
 python3 -m pytest tests/test_tp08.py -q
 ```
 
-The tests verify that `second` is really blocked before `first` posts, that the
-two- and three-process rendezvous complete, and that the emitter is released
-both when it arrives before the receivers and when it arrives after them.
+Les tests vérifient que `second` est réellement bloqué avant que `first` ne fasse son post, que les rendez-vous à deux et trois processus aboutissent, et que l'émetteur est libéré à la fois lorsqu'il arrive avant les récepteurs et lorsqu'il arrive après eux.

@@ -56,8 +56,8 @@ static Sequence parse_initial(const char *text)
 }
 
 /*
- * One step of the look-and-say sequence: each maximal run of equal values is
- * replaced by (run length, value).
+ * Une étape de la suite « look-and-say » : chaque plage maximale de valeurs
+ * égales est remplacée par (longueur de la plage, valeur).
  */
 static Sequence next_line(const Sequence *current)
 {

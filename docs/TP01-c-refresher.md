@@ -1,89 +1,75 @@
-# TP 1 — C refresher
+# TP 1 — Révision du C
 
-## Objectives
+## Objectifs
 
-- warm up dynamic allocation, arrays and command-line parsing in C;
-- implement a few classic algorithms with careful edge-case handling;
-- compile with `-Wall -Wextra -g` and keep the programs warning-free.
+- se remettre à niveau sur l'allocation dynamique, les tableaux et l'analyse des arguments de la ligne de commande en C ;
+- implémenter quelques algorithmes classiques avec une gestion soignée des cas limites ;
+- compiler avec `-Wall -Wextra -g` et garder les programmes sans avertissement.
 
-The session contains four independent programs.
+La séance contient quatre programmes indépendants.
 
 ---
 
-## 1. Prime factorisation (`facteurs`)
+## 1. Factorisation en nombres premiers (`facteurs`)
 
-`smallest_divisor(n)` returns the smallest divisor of `n` greater than one,
-or `n` when `n` is prime.  Even numbers are handled immediately, then only odd
-candidates are tested.  The loop is written
+`smallest_divisor(n)` renvoie le plus petit diviseur de `n` supérieur à un, ou `n` lorsque `n` est premier. Les nombres pairs sont traités immédiatement, puis seuls les candidats impairs sont testés. La boucle est écrite
 
 ```c
 for (divisor = 3; divisor <= number / divisor; divisor += 2)
 ```
 
-rather than `divisor * divisor <= number`: the division form cannot overflow
-when `number` is close to `LLONG_MAX`.
+plutôt que `divisor * divisor <= number` : la forme avec division ne peut pas déborder lorsque `number` est proche de `LLONG_MAX`.
 
-The factorisation repeatedly extracts the smallest divisor.  Because the
-divisor is always prime, the output is the prime factorisation in
-non-decreasing order.  For the statement example:
+La factorisation extrait répétitivement le plus petit diviseur. Comme le diviseur est toujours premier, la sortie est la factorisation en nombres premiers par ordre croissant. Pour l'exemple de l'énoncé :
 
 ```
 1170701532 = 2 x 2 x 3 x 3 x 3 x 7 x 7 x 7 x 11 x 13 x 13 x 17
 ```
 
-The worst case is a prime number, with `O(sqrt(n))` trial divisions.  The
-memory usage is `O(1)`.
+Le pire cas est un nombre premier, avec `O(sqrt(n))` divisions d'essai. L'utilisation mémoire est `O(1)`.
 
-`0` and `1` have no prime factor and are printed as themselves; a negative
-number starts with the factor `-1`.
+`0` et `1` n'ont pas de facteur premier et sont affichés tels quels ; un nombre négatif commence par le facteur `-1`.
 
 ---
 
-## 2. Look-and-say (`enigme`)
+## 2. Suite « look-and-say » (`enigme`)
 
-A line is stored in a growable `Sequence`.  One step scans the current line,
-detects maximal runs of equal values and writes `(run length, value)` for each
-run.  For example `1 2 1 1` becomes `1 1 1 2 2 1`, then `3 1 2 2 1 1`.
+Une ligne est stockée dans une `Sequence` extensible. Une étape parcourt la ligne courante, détecte les suites maximales de valeurs égales et écrit `(longueur de la suite, valeur)` pour chaque suite. Par exemple `1 2 1 1` devient `1 1 1 2 2 1`, puis `3 1 2 2 1 1`.
 
-The number of lines and the initial line are command-line arguments:
+Le nombre de lignes et la ligne initiale sont des arguments de la ligne de commande :
 
 ```bash
 ./bin/enigme 3 7
 ./bin/enigme "1 2 1 1" 3
 ```
 
-Each line is built in `O(length)` and the lengths grow exponentially in the
-worst case, so the total cost is proportional to the total output size.
+Chaque ligne est construite en `O(length)` et les longueurs croissent exponentiellement dans le pire cas, donc le coût total est proportionnel à la taille totale de la sortie.
 
 ---
 
-## 3. Intersection of two lines (`intersection`)
+## 3. Intersection de deux droites (`intersection`)
 
-For two points `P1(x1, y1)` and `P2(x2, y2)`, the slope is
+Pour deux points `P1(x1, y1)` et `P2(x2, y2)`, la pente est
 
 ```
 a = (y2 - y1) / (x2 - x1)
 b = y1 - a * x1
 ```
 
-The program deliberately separates the vertical case (`x1 == x2`), where the
-slope is undefined, instead of dividing by zero.
+Le programme sépare volontairement le cas vertical (`x1 == x2`), où la pente n'est pas définie, au lieu de diviser par zéro.
 
-| Case | Result |
+| Cas | Résultat |
 |---|---|
-| both lines vertical, different `x` | parallel, no intersection |
-| both lines vertical, same `x` | confounded, infinitely many intersections |
-| one vertical | substitute `x` into the other equation |
-| same slope, same intercept | confounded |
-| same slope, different intercept | parallel |
-| otherwise | `x = (b2 - b1) / (a1 - a2)`, then `y = a1 x + b1` |
+| les deux droites verticales, `x` différents | parallèles, pas d'intersection |
+| les deux droites verticales, même `x` | confondues, une infinité d'intersections |
+| une seule verticale | substituer `x` dans l'autre équation |
+| même pente, même ordonnée à l'origine | confondues |
+| même pente, ordonnée à l'origine différente | parallèles |
+| sinon | `x = (b2 - b1) / (a1 - a2)`, puis `y = a1 x + b1` |
 
-Floating-point comparisons use a relative epsilon (`1e-9`), so almost-parallel
-lines are not mistaken for parallel ones because of rounding.
+Les comparaisons en virgule flottante utilisent un epsilon relatif (`1e-9`), afin que des droites presque parallèles ne soient pas prises pour des droites parallèles à cause des arrondis.
 
-The statement works with **segments** even though it derives line equations.
-The program therefore also checks whether the intersection lies inside both
-segments and prints whether it does.
+L'énoncé travaille avec des **segments** bien qu'il dérive des équations de droites. Le programme vérifie donc aussi si l'intersection se trouve à l'intérieur des deux segments et affiche si c'est le cas.
 
 ```bash
 ./bin/intersection 0 0 4 4 0 4 4 0
@@ -93,11 +79,9 @@ segments and prints whether it does.
 
 ---
 
-## 4. Insertion sort (`tri_insertion`)
+## 4. Tri par insertion (`tri_insertion`)
 
-The invariant before iteration `i` is: `values[0..i-1]` is sorted.  The key
-`values[i]` is saved, every larger element of the prefix is shifted one slot
-to the right, and the key is inserted in the hole.
+L'invariant avant l'itération `i` est : `values[0..i-1]` est trié. La clé `values[i]` est sauvegardée, chaque élément plus grand du préfixe est décalé d'une case vers la droite, et la clé est insérée dans le trou.
 
 ```c
 for (index = 1; index < length; index++) {
@@ -111,17 +95,15 @@ for (index = 1; index < length; index++) {
 }
 ```
 
-- best case (already sorted): `n - 1` comparisons, `Theta(n)`;
-- worst case (reverse sorted): `n(n-1)/2` comparisons and shifts,
-  `Theta(n^2)`;
-- in place, `O(1)` extra memory.
+- meilleur cas (déjà trié) : `n - 1` comparaisons, `Theta(n)` ;
+- pire cas (trié en ordre inverse) : `n(n-1)/2` comparaisons et décalages, `Theta(n^2)` ;
+- en place, `O(1)` de mémoire supplémentaire.
 
-`--verbose` prints the array after each insertion, which makes the algorithm
-easy to follow on the blackboard example.
+`--verbose` affiche le tableau après chaque insertion, ce qui rend l'algorithme facile à suivre sur l'exemple du tableau.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp01
@@ -132,7 +114,4 @@ make -C tp01
 python3 -m pytest tests/test_tp01.py -q
 ```
 
-The tests cover the statement example, prime inputs, `0`, `1`, negative
-numbers, the exact look-and-say lines, parallel/confounded/vertical lines,
-intersections outside the segments, duplicates, negative values and the
-verbose insertion trace.
+Les tests couvrent l'exemple de l'énoncé, les entrées premières, `0`, `1`, les nombres négatifs, les lignes exactes de look-and-say, les droites parallèles/confondues/verticales, les intersections à l'extérieur des segments, les doublons, les valeurs négatives et la trace détaillée du tri par insertion.

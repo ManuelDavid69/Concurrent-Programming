@@ -20,7 +20,7 @@ int main(void)
     }
     printf("%d\n", n);
     while (wait(NULL) > 0) {
-        /* reap the descendants created by the children */
+        /* récupère les descendants créés par les fils */
     }
     return 0;
 }

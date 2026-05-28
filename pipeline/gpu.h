@@ -24,9 +24,10 @@ struct Fragment {
 typedef struct Fragment Fragment;
 
 /*
- * The three functions below are the only entry points of the graphics
- * library.  triangle_creator_init() loads a procedural 3D scene and clears
- * the image; destroy() saves the image to PIPELINE_OUTPUT or pipeline.ppm.
+ * Les trois fonctions ci-dessous sont les seuls points d'entrée de la
+ * bibliothèque graphique.  triangle_creator_init() charge une scène 3D
+ * procédurale et efface l'image ; destroy() enregistre l'image dans
+ * PIPELINE_OUTPUT ou pipeline.ppm.
  */
 void *triangle_creator_init(void);
 int triangle_creator_get_next_triangle(void *creator, struct Triangle *triangle);

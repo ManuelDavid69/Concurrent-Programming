@@ -9,10 +9,10 @@
 #include <string.h>
 
 /*
- * Variant 3: the code ends with A or B.  Digits are accumulated in the
- * current attempt; A or B validates that attempt and clears it.  Typing more
- * digits than the code contains makes the attempt invalid, which is why
- * "78267B" is rejected and "7A8267B" is accepted.
+ * Variante 3 : le code se termine par A ou B.  Les chiffres sont accumulés
+ * dans la tentative courante ; A ou B valide cette tentative et l'efface.
+ * Saisir plus de chiffres que le code n'en contient rend la tentative
+ * invalide, c'est pourquoi « 78267B » est rejeté et « 7A8267B » est accepté.
  */
 static int process_validation_code(const char *code)
 {
@@ -34,7 +34,7 @@ static int process_validation_code(const char *code)
             if (attempt_length < digit_count) {
                 attempt[attempt_length++] = (char)character;
             } else {
-                /* Too many digits: the attempt can no longer match. */
+                /* Trop de chiffres : la tentative ne peut plus correspondre. */
                 attempt_length = digit_count + 1;
             }
         }

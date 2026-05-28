@@ -1,11 +1,11 @@
-# Build artefacts
+# Artefacts de compilation
 *.o
 *.a
 bin/
 obj/
 build/
 
-# Test and tooling caches
+# Caches de tests et d’outils
 __pycache__/
 .pytest_cache/
 .coverage
@@ -13,7 +13,7 @@ htmlcov/
 .venv/
 venv/
 
-# Programs produced by the practical work
+# Programmes produits par les TP
 tp03/out/
 tp03/*.ppm
 !tp03/sample.ppm
@@ -23,11 +23,11 @@ tp14/*.ppm
 pipeline/*.ppm
 users
 
-# Editors and operating systems
+# Éditeurs et systèmes d’exploitation
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
 
-# Local course material
+# Matériel de cours local
 *.zip

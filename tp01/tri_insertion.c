@@ -19,9 +19,9 @@ static void print_array(const char *label, const int *values, size_t length)
 }
 
 /*
- * Insertion sort.  At the beginning of iteration i, values[0..i-1] is sorted.
- * The key is moved to its place by shifting the larger elements one slot to
- * the right.
+ * Tri par insertion.  Au début de l'itération i, values[0..i-1] est trié.
+ * La clé est déplacée à sa place en décalant d'un cran vers la droite les
+ * éléments plus grands.
  */
 static void insertion_sort(int *values, size_t length)
 {

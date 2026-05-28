@@ -8,9 +8,9 @@
 #include <unistd.h>
 
 /*
- * fork() is called three times in a loop, without any condition on the call
- * or on the display.  Every process therefore continues the loop, which
- * produces the complete binary tree of processes (2^3 processes).
+ * fork() est appelé trois fois dans une boucle, sans aucune condition sur
+ * l'appel ni sur l'affichage.  Chaque processus poursuit donc la boucle, ce
+ * qui produit l'arbre binaire complet des processus (2^3 processus).
  */
 int main(void)
 {
@@ -23,7 +23,7 @@ int main(void)
         fflush(stdout);
     }
     while (wait(NULL) > 0) {
-        /* Reap every descendant so that the shell prompt comes back cleanly. */
+        /* Récupère chaque descendant pour que l'invite du shell revienne proprement. */
     }
     return EXIT_SUCCESS;
 }

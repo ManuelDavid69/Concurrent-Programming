@@ -1,11 +1,11 @@
-# Graphics pipeline — threads and barriers
+# Pipeline graphique — threads et barrières
 
-## Objectives
+## Objectifs
 
-- build a multi-stage producer/consumer pipeline;
-- connect stages with bounded buffers;
-- synchronise all stages with a barrier when the scene changes;
-- render a complete PPM image from a procedural 3D scene.
+- construire un pipeline producteur/consommateur à plusieurs étages ;
+- relier les étages par des tampons bornés ;
+- synchroniser tous les étages avec une barrière lorsque la scène change ;
+- rendre une image PPM complète à partir d'une scène 3D procédurale.
 
 ---
 
@@ -17,16 +17,15 @@ creator thread -----------> raster threads -----------> shader threads --> image
                 buffer                        buffer
 ```
 
-| Stage | Threads | Input | Output |
+| Étage | Threads | Entrée | Sortie |
 |---|---|---|---|
-| triangle creator | 1 | procedural torus | `Triangle` buffer |
-| rasteriser | R | triangles | `Fragment` buffer |
+| créateur de triangles | 1 | tore procédural | tampon `Triangle` |
+| rastériseur | R | triangles | tampon `Fragment` |
 | shader | S | fragments | image + z-buffer |
 
-`R` and `S` are command-line arguments.  The queues are bounded to keep
-memory usage constant and to apply back-pressure to the producer.
+`R` et `S` sont des arguments de ligne de commande. Les files sont bornées afin de maintenir une utilisation mémoire constante et d'appliquer une contre-pression au producteur.
 
-`gpu.c` provides the graphics primitives and is not modified:
+`gpu.c` fournit les primitives graphiques et n'est pas modifié :
 
 ```c
 void *triangle_creator_init(void);
@@ -43,103 +42,66 @@ int fragment_is_sync(struct Fragment *fragment);
 void gpu_shader(struct Fragment fragment);
 ```
 
-`triangle_creator_get_next_triangle` returns 0 at the end of the scene.
-`triangle_is_sync` identifies a colour-change marker.  `raster_init` followed
-by repeated `raster_get_next_fragment` enumerates the pixels covered by a
-triangle (one fragment per pixel).  `gpu_shader` performs the z-test and writes
-the pixel.
+`triangle_creator_get_next_triangle` renvoie 0 à la fin de la scène. `triangle_is_sync` identifie un marqueur de changement de couleur. `raster_init` suivi d'appels répétés à `raster_get_next_fragment` énumère les pixels couverts par un triangle (un fragment par pixel). `gpu_shader` effectue le test de profondeur (z-test) et écrit le pixel.
 
 ---
 
-## 2. Procedural scene
+## 2. Scène procédurale
 
-The scene is a torus generated with 28 × 14 quads, i.e. 784 triangles.  Every
-112 triangles the colour changes and a synchronisation triangle is inserted.
-The torus is rotated around the y and x axes and projected orthographically
-onto a 640×480 image.
+La scène est un tore généré avec 28 × 14 quadrilatères, soit 784 triangles. Tous les 112 triangles, la couleur change et un triangle de synchronisation est inséré. Le tore est tourné autour des axes y et x et projeté orthogonalement sur une image 640×480.
 
-The six palette colours and the dark background explain why the final image
-contains only seven distinct RGB values: the shader uses flat colours, not
-interpolated lighting.  The point of the lab is the pipeline, not a physically
-based renderer.
+Les six couleurs de la palette et le fond sombre expliquent pourquoi l'image finale ne contient que sept valeurs RVB distinctes : le shader utilise des couleurs plates, sans éclairage interpolé. Le but du TP est le pipeline, pas un moteur de rendu physiquement réaliste.
 
 ---
 
-## 3. Pipeline synchronisation
+## 3. Synchronisation du pipeline
 
-### Queues
+### Files
 
-Both buffers are circular arrays protected by one mutex and two condition
-variables per queue (`not_empty`, `not_full`).  A producer waits when the queue
-is full; a consumer waits when it is empty.
+Les deux tampons sont des tableaux circulaires protégés par un mutex et deux variables de condition par file (`not_empty`, `not_full`). Un producteur attend lorsque la file est pleine ; un consommateur attend lorsqu'elle est vide.
 
-### Colour-change barriers
+### Barrières de changement de couleur
 
-A plain producer/consumer pipeline has no reason to wait: fragments from the
-old colour can still be in the buffers when the creator starts producing the
-new colour, which produces visible tearing.  The synchronisation triangle
-triggers a **global drain**:
+Un pipeline producteur/consommateur ordinaire n'a aucune raison d'attendre : des fragments de l'ancienne couleur peuvent encore être dans les tampons lorsque le créateur commence à produire la nouvelle couleur, ce qui provoque un déchirement (tearing) visible. Le triangle de synchronisation déclenche un **vidage global** :
 
-1. the creator increments `epoch`, broadcasts every condition and waits on a
-   barrier of `1 + R + S` threads;
-2. every raster thread notices the new epoch, stops taking new triangles,
-   finishes the triangles already in flight (`raster_busy`), drains the
-   triangle queue, increments `raster_done`, then waits at the barrier;
-3. every shader thread notices the new epoch, keeps consuming fragments until
-   `raster_done == R` and the fragment queue is empty, increments
-   `shader_done`, then waits at the barrier;
-4. when all threads have arrived, the barrier releases them and the creator
-   resets the counters and continues with the new colour.
+1. le créateur incrémente `epoch`, diffuse toutes les conditions et attend sur une barrière de `1 + R + S` threads ;
+2. chaque thread de rastérisation remarque la nouvelle époque (epoch), cesse de prendre de nouveaux triangles, termine les triangles déjà en cours (`raster_busy`), vide la file de triangles, incrémente `raster_done`, puis attend à la barrière ;
+3. chaque thread de shader remarque la nouvelle époque, continue de consommer des fragments jusqu'à ce que `raster_done == R` et que la file de fragments soit vide, incrémente `shader_done`, puis attend à la barrière ;
+4. lorsque tous les threads sont arrivés, la barrière les libère et le créateur remet les compteurs à zéro et continue avec la nouvelle couleur.
 
-The `raster_busy` counter is essential: a triangle may have been dequeued but
-not yet fully rasterised when the epoch changes.  Counting it prevents the
-shaders from declaring the pipeline empty too early.
+Le compteur `raster_busy` est essentiel : un triangle peut avoir été retiré de la file mais pas encore entièrement rastérisé lorsque l'époque change. Le compter empêche les shaders de déclarer le pipeline vide trop tôt.
 
-Using a barrier (rather than a mutex/condition counter) also makes the
-rendezvous reusable: every thread calls `pthread_barrier_wait` exactly once per
-colour change, and the barrier automatically resets for the next round.
+Utiliser une barrière (plutôt qu'un compteur mutex/condition) rend aussi le rendez-vous réutilisable : chaque thread appelle `pthread_barrier_wait` exactement une fois par changement de couleur, et la barrière se réinitialise automatiquement pour le tour suivant.
 
-### End of the scene
+### Fin de la scène
 
-After the last triangle, the creator performs one final synchronisation.  This
-guarantees that every fragment has been shaded before
-`triangle_creator_destroy` saves the image.  Then the `done` flag is set, the
-conditions are broadcast, and all threads are joined.
+Après le dernier triangle, le créateur effectue une dernière synchronisation. Cela garantit que chaque fragment a été ombré avant que `triangle_creator_destroy` n'enregistre l'image. Ensuite, le drapeau `done` est positionné, les conditions sont diffusées, et tous les threads sont joints.
 
 ---
 
-## 4. Rasterisation and shading
+## 4. Rastérisation et ombrage
 
-For each triangle, `raster_init` computes the bounding box and the signed area.
-For each pixel centre inside the triangle, barycentric weights give the colour
-and the interpolated depth.  `gpu_shader` compares the depth with the z-buffer
-under a mutex and writes the pixel if it is closer.
+Pour chaque triangle, `raster_init` calcule la boîte englobante et l'aire signée. Pour chaque centre de pixel à l'intérieur du triangle, des poids barycentriques donnent la couleur et la profondeur interpolée. `gpu_shader` compare la profondeur avec le z-buffer sous un mutex et écrit le pixel s'il est plus proche.
 
-The z-buffer is the only shared structure written by the shaders; the mutex
-makes the compare-and-write atomic.  The image itself is written at the same
-time as the depth, so no other lock is needed.
+Le z-buffer est la seule structure partagée écrite par les shaders ; le mutex rend la comparaison-écriture atomique. L'image elle-même est écrite en même temps que la profondeur, donc aucun autre verrou n'est nécessaire.
 
 ---
 
-## 5. Results
+## 5. Résultats
 
-- `pipeline 1 1` — minimal configuration, easier to debug;
-- `pipeline 2 2` — the default;
-- `pipeline 4 3` — more parallelism.
+- `pipeline 1 1` — configuration minimale, plus facile à déboguer ;
+- `pipeline 2 2` — la configuration par défaut ;
+- `pipeline 4 3` — davantage de parallélisme.
 
-All configurations produce a 640×480 P6 image with the same seven colours and
-the same torus silhouette.  The exact pixel values are deterministic for a
-given configuration; different thread counts may differ on shared triangle
-edges because the order of equal-depth fragments is not specified.
+Toutes les configurations produisent une image PPM P6 640×480 avec les mêmes sept couleurs et la même silhouette de tore. Les valeurs de pixels exactes sont déterministes pour une configuration donnée ; des nombres de threads différents peuvent différer sur les arêtes de triangles partagées, car l'ordre des fragments de profondeur égale n'est pas spécifié.
 
-The generated image is shown below.  The barrier removes the horizontal colour
-bands that appear when the stages are not synchronised.
+L'image générée est présentée ci-dessous. La barrière supprime les bandes de couleur horizontales qui apparaissent lorsque les étages ne sont pas synchronisés.
 
-![Torus rendered by the pipeline](images/pipeline.png)
+![Tore rendu par le pipeline](images/pipeline.png)
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C pipeline
@@ -148,6 +110,4 @@ make -C pipeline
 python3 -m pytest tests/test_pipeline.py -q
 ```
 
-The tests run the pipeline with 1/1, 2/2 and 4/3 threads, check the PPM
-dimensions, the number of colours and the number of non-background pixels, and
-verify that a zero thread count is rejected.
+Les tests exécutent le pipeline avec 1/1, 2/2 et 4/3 threads, vérifient les dimensions PPM, le nombre de couleurs et le nombre de pixels non-fond, et s'assurent qu'un nombre de threads nul est rejeté.

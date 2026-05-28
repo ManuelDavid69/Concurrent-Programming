@@ -1,33 +1,31 @@
-# TP 10 — Shared memory
+# TP 10 — Mémoire partagée
 
-## Objectives
+## Objectifs
 
-- create and attach System V shared-memory segments;
-- build a reusable N-way barrier from a mutex, a counter and two turnstiles;
-- implement a bounded FIFO producer/consumer with several producers and
-  consumers;
-- implement the three-process value-exchange algorithm (P0, P1, P2).
+- créer et attacher des segments de mémoire partagée System V ;
+- construire une barrière réutilisable à N participants à partir d'un mutex, d'un compteur et de deux tourniquets ;
+- implémenter un producteur/consommateur FIFO borné avec plusieurs producteurs et consommateurs ;
+- implémenter l'algorithme d'échange de valeurs à trois processus (P0, P1, P2).
 
 ---
 
-## 1. Resources
+## 1. Ressources
 
-`init [capacity] [producers]` creates three independent groups:
+`init [capacity] [producers]` crée trois groupes indépendants :
 
-| Group | Shared segment | Semaphores |
+| Groupe | Segment partagé | Sémaphores |
 |---|---|---|
-| rendezvous | `RendezVous { count, generation }` | mutex, turnstile 0, turnstile 1 |
-| producer/consumer | `Buffer` with `capacity` integers | mutex, empty, full |
-| exchange | `Echange { first, second, third }` | P1, P2, P0 vers P1, P0 vers P2 |
+| rendez-vous | `RendezVous { count, generation }` | mutex, tourniquet 0, tourniquet 1 |
+| producteur/consommateur | `Buffer` de `capacity` entiers | mutex, empty, full |
+| échange | `Echange { first, second, third }` | P1, P2, P0 vers P1, P0 vers P2 |
 
-`clean` removes all six resources.  Removing stale resources at the beginning
-of `init` makes the programs re-runnable after a crash.
+`clean` supprime les six ressources. Supprimer les ressources obsolètes au début de `init` rend les programmes réexécutables après un plantage.
 
 ---
 
-## 2. N-way rendezvous
+## 2. Rendez-vous à N participants
 
-Each process calls `rdv_n N`, all with the same N.  The barrier is:
+Chaque processus appelle `rdv_n N`, tous avec le même N. La barrière est :
 
 ```
 lock(mutex)
@@ -44,86 +42,59 @@ if (state->count == N) {
 }
 ```
 
-- the **last** process resets the counter and releases the `N-1` waiters;
-- the **generation parity** selects one of two turnstiles, which lets the
-  barrier be reused: a process that arrives for the next round waits on the
-  other turnstile instead of consuming a token from the previous round;
-- the mutex protects `count` and `generation`.
+- le **dernier** processus remet le compteur à zéro et libère les `N-1` attenteurs ;
+- la **parité de génération** sélectionne l'un des deux tourniquets, ce qui permet de réutiliser la barrière : un processus qui arrive pour le tour suivant attend sur l'autre tourniquet au lieu de consommer un jeton du tour précédent ;
+- le mutex protège `count` et `generation`.
 
-The barrier is reusable and uses a constant number of semaphores, independent
-of N.  The only requirement is that every participant uses the same N.  If a
-process is missing, the others block forever, which is the expected semantics
-of a rendezvous.
+La barrière est réutilisable et utilise un nombre constant de sémaphores, indépendamment de N. La seule condition est que chaque participant utilise le même N. Si un processus manque, les autres se bloquent indéfiniment, ce qui correspond à la sémantique attendue d'un rendez-vous.
 
-**Answer to the statement's question.**  With the semaphores seen so far, a
-rendezvous for N processes whose N is **not known when the semaphores are
-created** cannot be implemented with a fixed set of per-process semaphores.
-The barrier above solves it because N is passed at run time and the shared
-counter records the number of arrivals.  If N were completely unknown, one
-would need a dynamic resource (a shared counter and a condition-like
-mechanism), or a manager process that counts arrivals.  A pure semaphore
-cannot discover N by itself.
+**Réponse à la question de l'énoncé.** Avec les sémaphores vus jusqu'ici, un rendez-vous pour N processus dont N **n'est pas connu au moment de la création des sémaphores** ne peut pas être implémenté avec un ensemble fixe de sémaphores par processus. La barrière ci-dessus le résout parce que N est passé à l'exécution et le compteur partagé enregistre le nombre d'arrivées. Si N était totalement inconnu, il faudrait une ressource dynamique (un compteur partagé et un mécanisme de type condition), ou un processus gestionnaire qui compte les arrivées. Un pur sémaphore ne peut pas découvrir N par lui-même.
 
 ---
 
-## 3. Bounded producer/consumer
+## 3. Producteur/consommateur borné
 
-The buffer is a circular array:
+Le tampon est un tableau circulaire :
 
 ```
 items[tail] = value; tail = (tail + 1) % capacity; count++
 value = items[head]; head = (head + 1) % capacity; count--
 ```
 
-- `empty` is initialised to `capacity`, `full` to 0;
-- a producer waits on `empty` before writing, then posts `full`;
-- a consumer waits on `full` before reading, then posts `empty`;
-- the mutex protects `head`, `tail` and `count`.
+- `empty` est initialisé à `capacity`, `full` à 0 ;
+- un producteur attend sur `empty` avant d'écrire, puis fait un post sur `full` ;
+- un consommateur attend sur `full` avant de lire, puis fait un post sur `empty` ;
+- le mutex protège `head`, `tail` et `count`.
 
-The FIFO order follows from the circular indices: the producer writes at
-`tail`, the consumer reads at `head`, and both advance in the same direction.
+L'ordre FIFO découle des indices circulaires : le producteur écrit à `tail`, le consommateur lit à `head`, et tous deux avancent dans la même direction.
 
-`init` records the expected number of producers.  Each producer registers
-itself at startup (`producers_started++`, `producers_active++`).  When the last
-producer finishes, it sets `finished` and posts `full` many times so that every
-consumer blocked on an empty buffer wakes up, observes the flag and exits.
-This avoids the classic problem of a consumer waiting forever after the last
-item.
+`init` enregistre le nombre attendu de producteurs. Chaque producteur s'enregistre au démarrage (`producers_started++`, `producers_active++`). Lorsque le dernier producteur termine, il positionne `finished` et fait `full` posts afin que chaque consommateur bloqué sur un tampon vide se réveille, constate le drapeau et sorte. Cela évite le problème classique d'un consommateur qui attend indéfiniment après le dernier élément.
 
-Multiple producers and consumers are supported as long as the number of
-producers given to `init` matches the number actually launched.
+Plusieurs producteurs et consommateurs sont pris en charge tant que le nombre de producteurs donné à `init` correspond au nombre réellement lancé.
 
 ---
 
-## 4. Value exchange (P0, P1, P2)
+## 4. Échange de valeurs (P0, P1, P2)
 
-P1 and P2 each hold a table of eight integers.  In each round:
+P1 et P2 détiennent chacun un tableau de huit entiers. À chaque tour :
 
-1. P1 writes its **maximum** in cell 0 and posts `P1`;
-2. P2 writes its **minimum** in cell 1 and posts `P2`;
-3. P0 waits for both, then:
-   - if `cell0 > cell1`, swaps the two values and sets cell 2 to 0;
-   - otherwise sets cell 2 to `-1`;
-4. P0 posts one response semaphore per thread (`P0 vers P1` and `P0 vers P2`);
-5. P1 replaces its maximum by the value in cell 0; P2 replaces its minimum by
-   the value in cell 1; both loop.
+1. P1 écrit son **maximum** dans la cellule 0 et fait un post sur `P1` ;
+2. P2 écrit son **minimum** dans la cellule 1 et fait un post sur `P2` ;
+3. P0 attend les deux, puis :
+   - si `cell0 > cell1`, échange les deux valeurs et met la cellule 2 à 0 ;
+   - sinon met la cellule 2 à `-1` ;
+4. P0 fait un post sur un sémaphore de réponse par thread (`P0 vers P1` et `P0 vers P2`) ;
+5. P1 remplace son maximum par la valeur de la cellule 0 ; P2 remplace son minimum par la valeur de la cellule 1 ; les deux bouclent.
 
-When `cell2 == -1`, no exchange is needed: every value of P1 is smaller than
-every value of P2.  P1 and P2 print their final tables and exit.
+Lorsque `cell2 == -1`, aucun échange n'est nécessaire : toutes les valeurs de P1 sont inférieures à toutes les valeurs de P2. P1 et P2 affichent leurs tableaux finaux et sortent.
 
-The initial tables are `{20, 30, ..., 90}` for P1 and `{1, 2, ..., 8}` for P2,
-so eight exchanges are required to separate them.  The final tables are
-`{1..8}` and `{20..90}`.
+Les tableaux initiaux sont `{20, 30, ..., 90}` pour P1 et `{1, 2, ..., 8}` pour P2, donc huit échanges sont nécessaires pour les séparer. Les tableaux finaux sont `{1..8}` et `{20..90}`.
 
-The three cells are protected by the protocol itself: P0 reads them only after
-both arrivals, and P1/P2 read their cell only after their own response
-semaphore.  Two response semaphores are necessary: with a single counting
-semaphore posted twice, one process could consume both tokens and read a cell
-that it has already overwritten.
+Les trois cellules sont protégées par le protocole lui-même : P0 ne les lit qu'après les deux arrivées, et P1/P2 ne lisent leur cellule qu'après leur propre sémaphore de réponse. Deux sémaphores de réponse sont nécessaires : avec un seul sémaphore compteur posté deux fois, un processus pourrait consommer les deux jetons et lire une cellule qu'il a déjà écrasée.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp10
@@ -138,6 +109,4 @@ wait
 python3 -m pytest tests/test_tp10.py -q
 ```
 
-The tests cover N = 1, 2, 3 and 5 for the barrier, FIFO order with one
-producer, several producers and consumers, and the final separation of the two
-tables by the exchange.
+Les tests couvrent N = 1, 2, 3 et 5 pour la barrière, l'ordre FIFO avec un producteur, plusieurs producteurs et consommateurs, et la séparation finale des deux tableaux par l'échange.

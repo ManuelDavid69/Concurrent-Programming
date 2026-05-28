@@ -6,7 +6,7 @@
 #include <sys/types.h>
 
 /* ------------------------------------------------------------------------- */
-/* Errors and allocation                                                     */
+/* Erreurs et allocation                                                     */
 /* ------------------------------------------------------------------------- */
 
 void die(const char *format, ...)
@@ -18,47 +18,47 @@ void *xrealloc(void *pointer, size_t size);
 char *xstrdup(const char *string);
 
 /* ------------------------------------------------------------------------- */
-/* Parsing and random numbers                                                */
+/* Analyse syntaxique et nombres aléatoires                                  */
 /* ------------------------------------------------------------------------- */
 
-/* Strict integer parsing: the whole string must be a valid int. */
+/* Analyse stricte d'un entier : toute la chaîne doit être un int valide. */
 bool parse_int(const char *text, int *value);
 bool parse_long(const char *text, long *value);
 bool parse_double(const char *text, double *value);
 
-/* Seeds rand() from the clock and the pid. */
+/* Initialise rand() à partir de l'horloge et du pid. */
 void pc_seed(void);
 int rand_range(int minimum, int maximum);
 
 /* ------------------------------------------------------------------------- */
-/* Timing                                                                    */
+/* Temporisation                                                             */
 /* ------------------------------------------------------------------------- */
 
 /*
- * All the labs that simulate work use these helpers.  PC_SLEEP_SCALE (a
- * positive floating-point number, default 1.0) multiplies every duration, so
- * a value below 1 keeps the integration tests fast without changing the
- * programs.
+ * Tous les TP qui simulent un travail utilisent ces fonctions auxiliaires.
+ * PC_SLEEP_SCALE (un nombre à virgule flottante positif, 1.0 par défaut)
+ * multiplie chaque durée, ainsi une valeur inférieure à 1 accélère les tests
+ * d'intégration sans modifier les programmes.
  */
 double pc_sleep_scale(void);
 void pc_sleep(double seconds);
 int pc_delay_ms(int milliseconds);
 
 /* ------------------------------------------------------------------------- */
-/* File descriptors                                                          */
+/* Descripteurs de fichiers                                                  */
 /* ------------------------------------------------------------------------- */
 
-/* Writes exactly count bytes, retrying on EINTR and partial writes. */
+/* Écrit exactement count octets, en réessayant sur EINTR et les écritures partielles. */
 int write_all(int fd, const void *buffer, size_t count);
 
-/* Reads exactly count bytes, retrying on EINTR and partial reads. */
+/* Lit exactement count octets, en réessayant sur EINTR et les lectures partielles. */
 int read_all(int fd, void *buffer, size_t count);
 
-/* Closes a descriptor and sets it to -1. */
+/* Ferme un descripteur et le remet à -1. */
 void close_fd(int *fd);
 
 /* ------------------------------------------------------------------------- */
-/* Processes                                                                 */
+/* Processus                                                                 */
 /* ------------------------------------------------------------------------- */
 
 pid_t xfork(void);

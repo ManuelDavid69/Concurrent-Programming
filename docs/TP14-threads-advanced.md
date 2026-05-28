@@ -1,19 +1,17 @@
-# TP 14 — Threads, continued
+# TP 14 — Threads, suite
 
-## Objectives
+## Objectifs
 
-- share a limited resource between N worker threads;
-- implement a blocking `demander(k)` / `rendre(k)` pair with a condition
-  variable;
-- supervise the shared invariant from a controller thread;
-- estimate pi with the Monte-Carlo method, first single-threaded then
-  multi-threaded, and compare the execution times.
+- partager une ressource limitée entre N threads workers ;
+- implémenter une paire bloquante `demander(k)` / `rendre(k)` avec une variable de condition ;
+- surveiller l'invariant partagé depuis un thread contrôleur ;
+- estimer pi avec la méthode de Monte-Carlo, d'abord en mono-thread puis en multi-thread, et comparer les temps d'exécution.
 
 ---
 
-## 1. Ball manager (`billes`)
+## 1. Gestionnaire de billes (`billes`)
 
-### Shared state
+### État partagé
 
 ```c
 typedef struct {
@@ -28,17 +26,17 @@ typedef struct {
 } BallManager;
 ```
 
-### Worker protocol
+### Protocole des workers
 
-Each worker repeats `iterations` times:
+Chaque worker répète `iterations` fois :
 
 ```
 demander(k)
-use the k balls (random sleep)
+utilise les k balles (sommeil aléatoire)
 rendre(k)
 ```
 
-`demander(k)`:
+`demander(k)` :
 
 ```c
 lock(mutex);
@@ -48,7 +46,7 @@ available -= k;
 unlock(mutex);
 ```
 
-`rendre(k)`:
+`rendre(k)` :
 
 ```c
 lock(mutex);
@@ -57,74 +55,53 @@ broadcast(condition);
 unlock(mutex);
 ```
 
-The `while` is essential: a broadcast only signals that the state changed, not
-that enough balls are now available.  Several workers can wake at the same
-time and only one of them may find a sufficient number of balls; the others
-must go back to sleep.
+Le `while` est essentiel : une diffusion signale seulement que l'état a changé, pas qu'assez de billes sont désormais disponibles. Plusieurs workers peuvent se réveiller en même temps et un seul peut trouver un nombre suffisant de billes ; les autres doivent se rendormir.
 
-The default scenario is `N = 4`, `maximum = 9` and demands `4, 3, 5, 2`.
-Since `4 + 3 + 5 + 2 = 14 > 9`, the workers cannot all be satisfied at once,
-which exercises the waiting path.
+Le scénario par défaut est `N = 4`, `maximum = 9` et des demandes `4, 3, 5, 2`. Comme `4 + 3 + 5 + 2 = 14 > 9`, les workers ne peuvent pas tous être satisfaits en même temps, ce qui exerce le chemin d'attente.
 
-### Controller
+### Contrôleur
 
-The controller thread checks the invariant
+Le thread contrôleur vérifie l'invariant
 
 ```
 0 <= available <= maximum
 ```
 
-once per second (scaled by `PC_SLEEP_SCALE` in the tests), increments its
-check counter and records a violation if the invariant is broken.  The main
-thread sets `stop_controller` after joining the workers, then joins the
-controller.
+une fois par seconde (mis à l'échelle par `PC_SLEEP_SCALE` dans les tests), incrémente son compteur de vérifications et enregistre une violation si l'invariant est rompu. Le thread principal positionne `stop_controller` après avoir joint les workers, puis joint le contrôleur.
 
-The mutex protects both `available` and the controller's flags; the worker
-prints the remaining number of balls after taking a consistent snapshot under
-the mutex.
+Le mutex protège à la fois `available` et les drapeaux du contrôleur ; le worker affiche le nombre de billes restantes après avoir pris un instantané cohérent sous le mutex.
 
 ---
 
-## 2. Monte-Carlo estimation of pi (`pi`)
+## 2. Estimation de pi par Monte-Carlo (`pi`)
 
-### Method
+### Méthode
 
-A random point `(x, y)` is drawn uniformly in `[0, 1] × [0, 1]`.  It lies in
-the quarter of the unit circle when `x² + y² <= 1`.  The area of the quarter
-circle is `pi / 4`, so
+Un point aléatoire `(x, y)` est tiré uniformément dans `[0, 1] × [0, 1]`. Il se trouve dans le quart du cercle unité lorsque `x² + y² <= 1`. L'aire du quart de cercle est `pi / 4`, donc
 
 ```
 pi ≈ 4 * hits / samples
 ```
 
-The standard error decreases as `1 / sqrt(N)`: one million samples typically
-give two or three correct decimals.  The goal is the parallelisation, not a
-record precision.
+L'erreur type diminue comme `1 / sqrt(N)` : un million d'échantillons donnent typiquement deux ou trois décimales correctes. Le but est la parallélisation, pas une précision record.
 
-### Random generator
+### Générateur aléatoire
 
-Each thread owns an `xorshift64*` state.  This avoids a shared `rand()` (which
-would need a lock and would serialise the hot loop) and gives independent
-streams.  The seeds are derived from the time, the pid and the thread index.
+Chaque thread possède son propre état `xorshift64*`. Cela évite un `rand()` partagé (qui nécessiterait un verrou et sérialiserait la boucle chaude) et donne des flux indépendants. Les graines sont dérivées du temps, du pid et de l'indice du thread.
 
-### Parallelisation
+### Parallélisation
 
-- `samples` is divided as evenly as possible between the threads (the first
-  `samples % threads` threads get one extra point);
-- each thread counts its own hits;
-- the main thread sums the hits after the joins.
+- `samples` est réparti aussi équitablement que possible entre les threads (les `samples % threads` premiers threads reçoivent un point de plus) ;
+- chaque thread compte ses propres succès ;
+- le thread principal additionne les succès après les jointures.
 
-No mutex is needed in the hot loop: each thread writes only its own `hits`
-field, and the main thread reads it after `pthread_join`.
+Aucun mutex n'est nécessaire dans la boucle chaude : chaque thread n'écrit que son propre champ `hits`, et le thread principal le lit après `pthread_join`.
 
-`--compare` runs the single-threaded version, then the multi-threaded one, and
-prints both estimates and the measured speed-up.  On a machine with several
-cores, the multi-threaded version is typically 2–4 times faster for a large N;
-the exact value depends on the scheduler and on the number of available cores.
+`--compare` exécute la version mono-thread, puis la version multi-thread, et affiche les deux estimations ainsi que l'accélération mesurée. Sur une machine à plusieurs cœurs, la version multi-thread est typiquement 2 à 4 fois plus rapide pour un grand N ; la valeur exacte dépend de l'ordonnanceur et du nombre de cœurs disponibles.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp14
@@ -134,6 +111,4 @@ make -C tp14
 python3 -m pytest tests/test_tp14.py -q
 ```
 
-The tests run the default ball scenario, check that the invariant is never
-violated, verify that an impossible demand is rejected, and check that both pi
-estimates are within 0.05 of the real value.
+Les tests exécutent le scénario de billes par défaut, vérifient que l'invariant n'est jamais violé, que toute demande impossible est rejetée, et que les deux estimations de pi sont à moins de 0,05 de la valeur réelle.

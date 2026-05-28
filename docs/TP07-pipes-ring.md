@@ -1,34 +1,32 @@
-# TP 7 — Pipes, continued
+# TP 7 — Tubes, suite
 
-## Objectives
+## Objectifs
 
-- organise N processes in a ring of anonymous pipes;
-- forward a structured message around the ring;
-- design a small request/response server with one pipe per client;
-- keep descriptor ownership clear in every process.
+- organiser N processus en un anneau de tubes anonymes ;
+- faire circuler un message structuré dans l'anneau ;
+- concevoir un petit serveur requête/réponse avec un tube par client ;
+- garder claire la propriété des descripteurs dans chaque processus.
 
 ---
 
-## 1. Ring of processes (`greater`)
+## 1. Anneau de processus (`greater`)
 
-### Topology
+### Topologie
 
-`pipe[i]` connects process `i` to process `(i + 1) % N`.  Process `i`:
+`pipe[i]` relie le processus `i` au processus `(i + 1) % N`. Le processus `i` :
 
-- reads from `pipe[(i - 1 + N) % N]`;
-- writes to `pipe[i]`.
+- lit depuis `pipe[(i - 1 + N) % N]` ;
+- écrit dans `pipe[i]`.
 
 ```
 process 0 -> pipe 0 -> process 1 -> pipe 1 -> ... -> process N-1 -> pipe N-1 -> process 0
 ```
 
-Each process closes every pipe end except its incoming read end and its
-outgoing write end.  This is what makes the ring well-defined: no process keeps
-a descriptor that could prevent EOF or create a deadlock.
+Chaque processus ferme toutes les extrémités de tube sauf son extrémité de lecture entrante et son extrémité d'écriture sortante. C'est ce qui rend l'anneau bien défini : aucun processus ne garde un descripteur qui pourrait empêcher l'EOF ou créer un interblocage.
 
-### Protocol
+### Protocole
 
-Every process draws a value and builds a `Candidate`:
+Chaque processus tire une valeur et construit un `Candidate` :
 
 ```c
 typedef struct {
@@ -38,28 +36,23 @@ typedef struct {
 } Candidate;
 ```
 
-Process 0 sends its candidate to process 1.  Every other process reads the
-incoming candidate, keeps the larger of the two (its own and the incoming one),
-and forwards the winner.  After one complete turn, process 0 receives the
-global maximum with the pid and rank of the process that produced it.
+Le processus 0 envoie son candidat au processus 1. Chaque autre processus lit le candidat entrant, conserve le plus grand des deux (le sien et celui qui arrive) et transmet le gagnant. Après un tour complet, le processus 0 reçoit le maximum global avec le pid et le rang du processus qui l'a produit.
 
-The program prints every generated value and then:
+Le programme affiche chaque valeur générée puis :
 
 ```
 Le plus grand nombre = 2602 - pid = 4235 - Numéro 5
 ```
 
-The order of the `processus ...` lines is arbitrary; the final line is printed
-after the whole ring has completed.
+L'ordre des lignes `processus ...` est arbitraire ; la ligne finale est affichée une fois l'anneau entièrement parcouru.
 
-With `N = 1`, process 0 writes to and reads from its own pipe; the result is
-its own candidate.  The test suite exercises N = 1, 2, 3, 6 and 12.
+Avec `N = 1`, le processus 0 écrit dans son propre tube et y lit ; le résultat est son propre candidat. La suite de tests exerce N = 1, 2, 3, 6 et 12.
 
 ---
 
-## 2. Calculator (`calculator`)
+## 2. Calculatrice (`calculator`)
 
-### Topology
+### Topologie
 
 ```
 client 0 --\
@@ -69,11 +62,9 @@ client 2 --/                       |
    +---- response pipe per client -+
 ```
 
-There is **one** request pipe for all clients and **one response pipe per
-client**.  The server creates the pipes before forking the clients, so every
-client inherits the descriptors.
+Il y a **un** tube de requêtes pour tous les clients et **un tube de réponse par client**. Le serveur crée les tubes avant de créer les clients par fork, de sorte que chaque client hérite des descripteurs.
 
-### Request and response
+### Requête et réponse
 
 ```c
 typedef struct {
@@ -91,26 +82,17 @@ typedef struct {
 } Response;
 ```
 
-The client identifier is an index between 0 and N-1, not a pid.  The server
-uses it directly as an index into the response-pipe array, which is simpler and
-avoids a search.
+L'identifiant de client est un indice entre 0 et N-1, pas un pid. Le serveur l'utilise directement comme indice dans le tableau des tubes de réponse, ce qui est plus simple et évite une recherche.
 
-Each client sends exactly one request and waits for its response.  The server
-reads requests in arrival order and answers immediately, so several clients
-can be active at the same time.  The `Request`/`Response` structures are small
-enough to be written atomically to a pipe (`PIPE_BUF`), but the code still uses
-`write_all`/`read_all` for robustness.
+Chaque client envoie exactement une requête et attend sa réponse. Le serveur lit les requêtes dans l'ordre d'arrivée et répond immédiatement, de sorte que plusieurs clients peuvent être actifs en même temps. Les structures `Request`/`Response` sont assez petites pour être écrites atomiquement dans un tube (`PIPE_BUF`), mais le code utilise tout de même `write_all`/`read_all` par robustesse.
 
-Supported operators: `+`, `-`, `*`, `/`.  A division by zero is rejected by the
-server (the result is set to 0 and an error is printed), although the clients
-never generate a zero divisor.
+Opérateurs pris en charge : `+`, `-`, `*`, `/`. Une division par zéro est rejetée par le serveur (le résultat est mis à 0 et une erreur est affichée), bien que les clients ne génèrent jamais de diviseur nul.
 
-`CALC_SEED` makes the client requests reproducible: client `i` uses
-`seed + i * 7919`, so the clients do not all generate the same request.
+`CALC_SEED` rend les requêtes des clients reproductibles : le client `i` utilise `seed + i * 7919`, de sorte que les clients ne génèrent pas tous la même requête.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp07
@@ -119,6 +101,4 @@ CALC_SEED=42 ./tp07/bin/calculator 4
 python3 -m pytest tests/test_tp07.py -q
 ```
 
-The tests check that the ring returns the true maximum for several sizes,
-including one process, and that every calculator response is arithmetically
-correct and reproducible with a fixed seed.
+Les tests vérifient que l'anneau renvoie le vrai maximum pour plusieurs tailles, y compris avec un seul processus, et que chaque réponse de la calculatrice est arithmétiquement correcte et reproductible avec une graine fixée.

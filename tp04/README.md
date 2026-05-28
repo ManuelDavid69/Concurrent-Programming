@@ -1,13 +1,13 @@
-# TP 4 — Arguments, fork and wait
+# TP 4 — Arguments, fork et wait
 
-| Program | Purpose |
+| Programme | Objectif |
 |---|---|
-| `bin/miroir` | reverse every argument |
-| `bin/moyenne` | average of integer grades in `[0, 20]` |
-| `bin/boucle` | three `fork()` calls in a loop, without any condition |
-| `bin/wait` | create N children, wait for each and print its exit code |
-| `bin/enfants` | four children printing `1..200`, concurrently or in order |
-| `bin/analyse-*` | the three code-analysis cases |
+| `bin/miroir` | inverser chaque argument |
+| `bin/moyenne` | moyenne de notes entières dans `[0, 20]` |
+| `bin/boucle` | trois appels à `fork()` dans une boucle, sans aucune condition |
+| `bin/wait` | créer N enfants, attendre chacun et afficher son code de sortie |
+| `bin/enfants` | quatre enfants affichant `1..200`, concurremment ou dans l'ordre |
+| `bin/analyse-*` | les trois cas d'analyse de code |
 
 ```bash
 make
@@ -19,10 +19,10 @@ make
 ./bin/enfants --ordered
 ```
 
-`boucle` creates a complete binary tree of processes: one process at
-iteration 0, two at iteration 1, four at iteration 2, hence seven displayed
-lines and eight processes.  `enfants --ordered` still creates the four
-children immediately, but releases them one at a time through a pipe, which
-guarantees the order `1..200` without serialising the process creation.
+`boucle` crée un arbre binaire complet de processus : un processus à l'itération
+0, deux à l'itération 1, quatre à l'itération 2, soit sept lignes affichées et
+huit processus. `enfants --ordered` crée tout de même immédiatement les quatre
+enfants, mais les libère un à un via un tuyau, ce qui garantit l'ordre `1..200`
+sans sérialiser la création des processus.
 
-The analysis of the three code snippets is in [`analyse/README.md`](analyse/README.md).
+L'analyse des trois extraits de code se trouve dans [`analyse/README.md`](analyse/README.md).

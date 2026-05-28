@@ -27,7 +27,8 @@ static void print_range(int child_index)
 }
 
 /*
- * Variant 1: the four children run concurrently, so their outputs interleave.
+ * Variante 1 : les quatre fils s'exécutent simultanément, donc leurs sorties
+ * s'entrelacent.
  */
 static int run_parallel(void)
 {
@@ -41,15 +42,15 @@ static int run_parallel(void)
         }
     }
     while (wait(NULL) > 0) {
-        /* Wait for all four children. */
+        /* Attend les quatre fils. */
     }
     return EXIT_SUCCESS;
 }
 
 /*
- * Variant 2: all four children exist, but each one waits for a token from the
- * parent.  The parent sends the token to child i, waits for it, then releases
- * child i + 1.  The output is therefore exactly 1, 2, ..., 200.
+ * Variante 2 : les quatre fils existent, mais chacun attend un jeton du père.
+ * Le père envoie le jeton au fils i, l'attend, puis libère le fils i + 1.  La
+ * sortie est donc exactement 1, 2, ..., 200.
  */
 static int run_ordered(void)
 {

@@ -1,43 +1,43 @@
-# TP 14 — Threads, continued
+# TP 14 — Threads, suite
 
-## Ball manager (`bin/billes`)
+## Gestionnaire de billes (`bin/billes`)
 
 ```bash
 make
 ./bin/billes 4 9 3 4,3,5,2
 ```
 
-N worker threads repeatedly request `k` balls, use them for a random delay and
-give them back.  The controller thread checks `0 <= available <= maximum`
-while the workers run.
+N threads workers demandent répétitivement `k` billes, les utilisent pendant un
+délai aléatoire puis les rendent. Le thread contrôleur vérifie
+`0 <= available <= maximum` pendant que les workers tournent.
 
-The condition variable `condition` is used by both directions:
-`demander(k)` waits while `available < k`, and `rendre(k)` adds the balls back
-and broadcasts.  A woken worker re-checks the predicate, so a broadcast does
-not guarantee that enough balls are available; it only says that the state
-changed.
+La variable de condition `condition` est utilisée dans les deux sens :
+`demander(k)` attend tant que `available < k`, et `rendre(k)` remet les billes et
+diffuse. Un worker réveillé revérifie le prédicat, donc une diffusion ne garantit
+pas que suffisamment de billes sont disponibles ; elle indique seulement que
+l'état a changé.
 
-The default scenario is the one from the statement: four workers asking for
-4, 3, 5 and 2 balls with a maximum of 9.  Since 4 + 3 + 5 + 2 > 9, some workers
-must wait.
+Le scénario par défaut est celui de l'énoncé : quatre workers demandant 4, 3, 5
+et 2 billes avec un maximum de 9. Comme 4 + 3 + 5 + 2 > 9, certains workers
+doivent attendre.
 
-## Monte-Carlo pi (`bin/pi`)
+## Pi par Monte-Carlo (`bin/pi`)
 
 ```bash
 ./bin/pi 1000000 4
 ./bin/pi --compare 1000000 4
 ```
 
-The single-threaded and multi-threaded variants draw random points in the unit
-square and count those inside the quarter circle.  With N points,
-`pi ≈ 4 * hits / N`.
+Les variantes mono-thread et multi-thread tirent des points aléatoires dans le
+carré unité et comptent ceux situés à l'intérieur du quart de cercle. Avec N
+points, `pi ≈ 4 * hits / N`.
 
-Each thread has its own xorshift state, so the threads do not share a random
-generator (which would need a lock and would serialise the computation).  The
-per-thread sample counts differ by at most one.  `--compare` runs both
-variants and prints the measured speed-up.
+Chaque thread possède son propre état xorshift, donc les threads ne partagent pas
+de générateur aléatoire (ce qui nécessiterait un verrou et sérialiserait le
+calcul). Les nombres d'échantillons par thread diffèrent d'au plus un.
+`--compare` exécute les deux variantes et affiche l'accélération mesurée.
 
-The estimate converges slowly: the standard error decreases as
-`1 / sqrt(N)`, so one million points usually give two or three correct
-decimals.  The purpose of the exercise is the parallelisation and the timing
-comparison, not a high-precision value of pi.
+L'estimation converge lentement : l'erreur standard diminue comme
+`1 / sqrt(N)`, donc un million de points donne généralement deux ou trois
+décimales exactes. Le but de l'exercice est la parallélisation et la comparaison
+des temps, pas une valeur de pi à haute précision.

@@ -1,10 +1,10 @@
-# TP 6 — Anonymous pipes
+# TP 6 — Tuyaux anonymes
 
-| Program | Purpose |
+| Programme | Objectif |
 |---|---|
-| `bin/guess` | number-guessing game: parent asks, child holds the secret |
-| `bin/redirection` | `wc < /etc/passwd`, `cut | tr`, and the full `cut | sed | sort > users` pipeline |
-| `bin/somme` | generator + even/odd filter + two summers, connected by five pipes |
+| `bin/guess` | jeu de devinette de nombres : le père pose les questions, l'enfant détient le secret |
+| `bin/redirection` | `wc < /etc/passwd`, `cut | tr`, et le pipeline complet `cut | sed | sort > users` |
+| `bin/somme` | générateur + filtre pair/impair + deux additionneurs, reliés par cinq tuyaux |
 
 ```bash
 make
@@ -15,15 +15,15 @@ printf '10\n20\n30\n40\n42\n' | GUESS_SECRET=42 ./bin/guess
 ./bin/somme --verbose 20 42
 ```
 
-`guess` uses two pipes: one for the propositions and one for the reply
-(`+`, `-` or `=`).  `GUESS_SECRET` makes the tests deterministic; without it
-the child draws a random number between 1 and 1000.
+`guess` utilise deux tuyaux : un pour les propositions et un pour la réponse
+(`+`, `-` ou `=`). `GUESS_SECRET` rend les tests déterministes ; sans lui,
+l'enfant tire un nombre aléatoire entre 1 et 1000.
 
-`redirection` shows `dup2` on standard input/output.  The pipeline is built
-with three children and two pipes; only the first child knows about
-`/etc/passwd`, and only the last one knows about `users`.
+`redirection` illustre `dup2` sur l'entrée/sortie standard. Le pipeline est
+construit avec trois enfants et deux tuyaux ; seul le premier enfant connaît
+`/etc/passwd`, et seul le dernier connaît `users`.
 
-`somme` closes every unused pipe end in every process, which is essential to
-avoid blocking reads.  The generator sends `-1` as the end marker; the filter
-forwards it to both summers, which add up their values and send one sum back
-to the generator.
+`somme` ferme chaque extrémité de tuyau inutilisée dans chaque processus, ce qui
+est essentiel pour éviter les lectures bloquantes. Le générateur envoie `-1`
+comme marqueur de fin ; le filtre le transmet aux deux additionneurs, qui
+additionnent leurs valeurs et renvoient une somme au générateur.

@@ -1,53 +1,43 @@
-# TP 5 — `fork`, `exec` and bounded parallelism
+# TP 5 — `fork`, `exec` et parallélisme borné
 
-## Objectives
+## Objectifs
 
-- replace the current program with another one using `fork` + `execvp`;
-- understand the difference between `&` (parallel) and `;` (sequential);
-- keep a bounded number of child processes active;
-- build a miniature `make` with parallel compilation and a conditional link.
+- remplacer le programme courant par un autre à l'aide de `fork` + `execvp` ;
+- comprendre la différence entre `&` (parallèle) et `;` (séquentiel) ;
+- maintenir un nombre borné de processus enfants actifs ;
+- construire un `make` miniature avec compilation parallèle et édition de liens conditionnelle.
 
 ---
 
-## 1. Simultaneous and successive commands
+## 1. Commandes simultanées et successives
 
-A shell command is executed by forking and calling `execvp` in the child.  The
-parent waits for the child with `waitpid`.
+Une commande du shell est exécutée en créant un processus par fork et en appelant `execvp` dans l'enfant. Le parent attend l'enfant avec `waitpid`.
 
 ### `simultane` — `du -sh /usr/share & ls -l & ps`
 
-All three children are created before the first `waitpid`.  The parent prints
-`Lancé` for each pid, then waits in a fixed order and prints `Terminé`.  The
-three commands genuinely overlap.
+Les trois enfants sont créés avant le premier `waitpid`. Le parent affiche `Lancé` pour chaque pid, puis attend dans un ordre fixe et affiche `Terminé`. Les trois commandes se chevauchent réellement.
 
-`SIMULTANE_PATH` replaces `/usr/share` in the `du` command; the default is the
-path from the statement.  The tests use a small temporary directory so that
-they do not depend on the size of `/usr/share` on the machine.
+`SIMULTANE_PATH` remplace `/usr/share` dans la commande `du` ; la valeur par défaut est le chemin de l'énoncé. Les tests utilisent un petit répertoire temporaire afin de ne pas dépendre de la taille de `/usr/share` sur la machine.
 
 ### `successif` — `du -sh /usr/share ; ls -l ; ps`
 
-The loop forks one child, waits for it, prints the result, and only then starts
-the next command.  The output is strictly `Lancé`, `Terminé`, `Lancé`, ....
+La boucle crée un enfant, l'attend, affiche le résultat, puis seulement démarre la commande suivante. La sortie est strictement `Lancé`, `Terminé`, `Lancé`, ....
 
-`execvp` searches the `PATH`, which avoids hard-coding `/usr/bin/du` and
-friends.  If `execvp` fails, the child prints the error and exits with a
-non-zero status; the parent reports `Échec`.
+`execvp` parcourt le `PATH`, ce qui évite de coder en dur `/usr/bin/du` et consorts. Si `execvp` échoue, l'enfant affiche l'erreur et se termine avec un statut non nul ; le parent signale `Échec`.
 
 ---
 
-## 2. Thumbnails with at most eight conversions
+## 2. Vignettes avec au plus huit conversions
 
-`miniature` walks the source directory with `opendir`/`readdir`, keeps only
-regular image names (`.jpg`, `.png`, `.ppm`, `.bmp`, `.gif`, `.tif`, `.webp`),
-and builds the source and destination paths.
+`miniature` parcourt le répertoire source avec `opendir`/`readdir`, ne conserve que les noms d'images réguliers (`.jpg`, `.png`, `.ppm`, `.bmp`, `.gif`, `.tif`, `.webp`), et construit les chemins source et destination.
 
-For each image it forks a child that executes:
+Pour chaque image, il crée un enfant qui exécute :
 
 ```
 convert source -resize 10% destination
 ```
 
-At most **eight** children are active.  When the pool is full:
+Au plus **huit** enfants sont actifs. Lorsque le pool est plein :
 
 ```c
 while (active >= MAX_CONVERSIONS) {
@@ -55,60 +45,47 @@ while (active >= MAX_CONVERSIONS) {
 }
 ```
 
-`report_finished` calls `waitpid(-1, ...)`, finds the matching slot by pid,
-prints the file name and updates the active count.  The slot is then reused by
-the next task.  At the end the remaining children are drained in the same way.
+`report_finished` appelle `waitpid(-1, ...)`, retrouve l'emplacement correspondant par pid, affiche le nom du fichier et met à jour le nombre d'actifs. L'emplacement est ensuite réutilisé par la tâche suivante. À la fin, les enfants restants sont drainés de la même manière.
 
-The destination directory is created if needed.  A failing `convert` produces
-`Échec conversion: file (code ...)` and the program returns 1, but the other
-conversions are still awaited.
+Le répertoire de destination est créé si nécessaire. Un `convert` qui échoue produit `Échec conversion: file (code ...)` et le programme renvoie 1, mais les autres conversions sont tout de même attendues.
 
 ---
 
-## 3. Parallel downloads with at most four `wget`
+## 3. Téléchargements parallèles avec au plus quatre `wget`
 
-The same pool pattern is used with `MAX_DOWNLOADS = 4`.  The last argument is
-the destination directory; every preceding argument is a URL.  Each child
-executes:
+Le même schéma de pool est utilisé avec `MAX_DOWNLOADS = 4`. Le dernier argument est le répertoire de destination ; chaque argument précédent est une URL. Chaque enfant exécute :
 
 ```
 wget -q -P destination URL
 ```
 
-`-q` keeps the output readable, `-P` selects the destination directory.  The
-parent prints `Début téléchargement` and `Téléchargement terminé` with the URL
-and pid.  The bounded pool prevents a long list of URLs from spawning an
-unlimited number of processes.
+`-q` garde la sortie lisible, `-P` sélectionne le répertoire de destination. Le parent affiche `Début téléchargement` et `Téléchargement terminé` avec l'URL et le pid. Le pool borné évite qu'une longue liste d'URL ne crée un nombre illimité de processus.
 
 ---
 
-## 4. Miniature `make`
+## 4. `make` miniature
 
-`make.c` takes one or more `.c` files followed by the executable name:
+`make.c` prend un ou plusieurs fichiers `.c` suivis du nom de l'exécutable :
 
 ```
 ./bin/make main.c mathutils.c message.c program
 ```
 
-1. For every source, a child executes
-   `gcc -Wall -Wextra -g -c source -o basename.o`.
-2. The parent waits for every compilation, printing success or failure.
-3. If any compilation failed, the link is cancelled and the program returns 1.
-4. Otherwise a last child executes `gcc -o executable objects...`.
+1. Pour chaque source, un enfant exécute `gcc -Wall -Wextra -g -c source -o basename.o`.
+2. Le parent attend chaque compilation et affiche un succès ou un échec.
+3. Si une compilation a échoué, l'édition de liens est annulée et le programme renvoie 1.
+4. Sinon, un dernier enfant exécute `gcc -o executable objects...`.
 
-Warnings are displayed but are not errors, as required by the statement.  The
-failure samples cover:
-- a syntax error (`bad_syntax.c`);
-- a missing header (`bad_include.c`);
-- an undefined symbol detected at link time (`missing_symbol.c`).
+Les avertissements sont affichés mais ne sont pas des erreurs, comme l'exige l'énoncé. Les exemples d'échec couvrent :
+- une erreur de syntaxe (`bad_syntax.c`) ;
+- un en-tête manquant (`bad_include.c`) ;
+- un symbole non défini détecté à l'édition de liens (`missing_symbol.c`).
 
-Object files are written in the current directory.  A production build system
-would put them in a dedicated directory and use timestamps to avoid
-recompiling unchanged files; the exercise focuses on the process management.
+Les fichiers objets sont écrits dans le répertoire courant. Un système de build de production les placerait dans un répertoire dédié et utiliserait les horodatages pour éviter de recompiler des fichiers inchangés ; l'exercice se concentre sur la gestion des processus.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp05
@@ -120,6 +97,4 @@ make -C tp05
 python3 -m pytest tests/test_tp05.py -q
 ```
 
-The tests check the ordering of the successive commands, the bounded number of
-simultaneous conversions and downloads (with a fake `convert` and a local HTTP
-server), and both the successful and failing paths of the mini `make`.
+Les tests vérifient l'ordre des commandes successives, le nombre borné de conversions et de téléchargements simultanés (avec un faux `convert` et un serveur HTTP local), ainsi que les chemins de succès et d'échec du `make` miniature.

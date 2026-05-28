@@ -1,13 +1,13 @@
-# TP 10 — Shared memory
+# TP 10 — Mémoire partagée
 
-| Program | Purpose |
+| Programme | Objectif |
 |---|---|
-| `bin/init [capacity] [producers]` | create the three shared segments and their semaphores |
-| `bin/clean` | remove every segment and semaphore |
-| `bin/rdv_n N` | N-way rendezvous (launch it N times) |
-| `bin/prod [items]` | bounded FIFO producer |
-| `bin/conso` | bounded FIFO consumer |
-| `bin/p0`, `bin/p1`, `bin/p2` | three-process value exchange |
+| `bin/init [capacity] [producers]` | créer les trois segments partagés et leurs sémaphores |
+| `bin/clean` | supprimer chaque segment et sémaphore |
+| `bin/rdv_n N` | rendez-vous à N voies (le lancer N fois) |
+| `bin/prod [items]` | producteur FIFO borné |
+| `bin/conso` | consommateur FIFO borné |
+| `bin/p0`, `bin/p1`, `bin/p2` | échange de valeurs à trois processus |
 
 ```bash
 make
@@ -21,17 +21,17 @@ wait
 ./bin/clean
 ```
 
-The N-way rendezvous uses one mutex, a shared counter and two turnstiles
-(`RDV_TURNSTILE_0/1`).  The generation parity selects the turnstile, so the
-same barrier can be reused several times.
+Le rendez-vous à N voies utilise un mutex, un compteur partagé et deux
+tourniquets (`RDV_TURNSTILE_0/1`). La parité de génération sélectionne le
+tourniquet, de sorte que la même barrière peut être réutilisée plusieurs fois.
 
-The producer/consumer buffer is a circular array of `capacity` integers with
-one mutex, one `empty` and one `full` semaphore.  `init` also records the
-expected number of producers so that the last one can mark the buffer as
-finished and wake every consumer.
+Le tampon producteur/consommateur est un tableau circulaire de `capacity`
+entiers avec un mutex, un sémaphore `empty` et un sémaphore `full`. `init`
+enregistre aussi le nombre attendu de producteurs afin que le dernier puisse
+marquer le tampon comme terminé et réveiller tous les consommateurs.
 
-The exchange uses three cells and four semaphores (one arrival per process and
-one response per process).  P1 writes its maximum in
-cell 0, P2 writes its minimum in cell 1, and P0 swaps them (or writes `-1` in
-cell 2 when no swap is needed).  P1 and P2 replace their extremum with the
-value returned by P0 and repeat until the tables are separated.
+L'échange utilise trois cellules et quatre sémaphores (une arrivée par processus
+et une réponse par processus). P1 écrit son maximum dans la cellule 0, P2 écrit
+son minimum dans la cellule 1, et P0 les échange (ou écrit `-1` dans la cellule 2
+lorsqu'aucun échange n'est nécessaire). P1 et P2 remplacent leur extremum par la
+valeur renvoyée par P0 et répètent jusqu'à ce que les tables soient séparées.

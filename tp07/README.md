@@ -1,37 +1,37 @@
-# TP 7 — Pipes, continued
+# TP 7 — Tuyaux, suite
 
-## Ring of processes (`bin/greater`)
+## Anneau de processus (`bin/greater`)
 
 ```bash
 make
 ./bin/greater 6
 ```
 
-Each of the N processes draws a random value, prints it, and forwards the
-largest candidate seen so far to its successor.  Process 0 starts the ring and
-receives the final candidate after one complete turn.
+Chacun des N processus tire une valeur aléatoire, l'affiche et transmet à son
+successeur la plus grande valeur candidate vue jusqu'ici. Le processus 0 démarre
+l'anneau et reçoit la valeur candidate finale après un tour complet.
 
-The ring uses N pipes: pipe `i` connects process `i` to process `(i + 1) % N`.
-Every process closes all descriptors except its incoming and outgoing pipe.
-The final line is
+L'anneau utilise N tuyaux : le tuyau `i` relie le processus `i` au processus
+`(i + 1) % N`. Chaque processus ferme tous les descripteurs sauf ses tuyaux
+entrant et sortant. La dernière ligne est
 
 ```
 Le plus grand nombre = 2602 - pid = 4235 - Numéro 5
 ```
 
-## Calculator (`bin/calculator`)
+## Calculatrice (`bin/calculator`)
 
 ```bash
 ./bin/calculator 4
 CALC_SEED=42 ./bin/calculator 6
 ```
 
-The server creates one request pipe (clients → server) and one response pipe
-per client (server → client).  Each client sends a `Request` containing its
-identifier, two operands and an operator among `+ - * /`, then waits for its
-`Response`.  The server evaluates the request and writes the result to the
-response pipe selected by the client identifier.
+Le serveur crée un tuyau de requêtes (clients → serveur) et un tuyau de réponses
+par client (serveur → client). Chaque client envoie une `Request` contenant son
+identifiant, deux opérandes et un opérateur parmi `+ - * /`, puis attend sa
+`Response`. Le serveur évalue la requête et écrit le résultat dans le tuyau de
+réponses sélectionné par l'identifiant du client.
 
-The client identifier is not the pid: an index assigned by the server is
-enough and makes the response pipe lookup immediate.  All unused ends are
-closed in both the server and the clients.
+L'identifiant du client n'est pas le pid : un indice attribué par le serveur
+suffit et rend la recherche du tuyau de réponses immédiate. Toutes les extrémités
+inutilisées sont fermées chez le serveur comme chez les clients.

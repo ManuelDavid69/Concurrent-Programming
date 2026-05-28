@@ -4,9 +4,9 @@
 #include <stddef.h>
 
 /*
- * Minimal binary/ASCII PPM (P6/P3) image.  Pixels are stored as RGB
- * triplets in a single one-dimensional array, exactly like the course
- * statement suggests: offset = 3 * (y * width + x).
+ * Image PPM (P6/P3) binaire/ASCII minimale.  Les pixels sont stockés sous
+ * forme de triplets RGB dans un unique tableau à une dimension, exactement
+ * comme le suggère l'énoncé du cours : offset = 3 * (y * width + x).
  */
 typedef struct {
     int width;
@@ -22,7 +22,7 @@ int image_save(const char *path, const Image *image);
 unsigned char *image_pixel(Image *image, int x, int y);
 const unsigned char *image_pixel_const(const Image *image, int x, int y);
 
-/* 3x3 mean blur; pixels outside the image are ignored (kernel crop). */
+/* Flou moyen 3x3 ; les pixels hors de l'image sont ignorés (recadrage du noyau). */
 Image *image_blur_crop(const Image *source);
 
 #endif

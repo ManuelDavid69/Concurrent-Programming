@@ -27,8 +27,9 @@ static bool nearly_equal(double left, double right)
 }
 
 /*
- * Returns the slope of the line through two points.  Vertical lines have no
- * slope: the function returns false and the caller uses first.x instead.
+ * Renvoie le coefficient directeur de la droite passant par deux points.  Les
+ * droites verticales n'ont pas de coefficient directeur : la fonction renvoie
+ * false et l'appelant utilise first.x à la place.
  */
 static bool coefficient(Point first, Point second, double *slope)
 {
@@ -39,7 +40,7 @@ static bool coefficient(Point first, Point second, double *slope)
     return true;
 }
 
-/* y-intercept of the line through a point with the given slope. */
+/* Ordonnée à l'origine de la droite passant par un point avec le coefficient donné. */
 static double ordonnee(double slope, Point point)
 {
     return point.y - slope * point.x;

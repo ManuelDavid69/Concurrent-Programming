@@ -1,20 +1,18 @@
-# TP 2 — Binary heap and heap sort
+# TP 2 — Tas binaire et tri par tas
 
-## Objectives
+## Objectifs
 
-- implement a min-heap with an array (`entasser`, `detasser`);
-- respect the two structural rules: heap order and a complete tree;
-- display the heap in several readable formats;
-- use the heap to sort (`tri par tas`);
-- compare the array implementation with a dynamically allocated tree and an
-  in-place heap sort.
+- implémenter un tas-min avec un tableau (`entasser`, `detasser`) ;
+- respecter les deux règles structurelles : ordre du tas et arbre complet ;
+- afficher le tas sous plusieurs formats lisibles ;
+- utiliser le tas pour trier (`tri par tas`) ;
+- comparer l'implémentation par tableau avec un arbre alloué dynamiquement et un tri par tas en place.
 
 ---
 
-## Representation
+## Représentation
 
-The heap is a complete binary tree stored in an array.  For a node at index
-`i`:
+Le tas est un arbre binaire complet stocké dans un tableau. Pour un nœud à l'indice `i` :
 
 ```
 parent      = (i - 1) / 2
@@ -22,55 +20,43 @@ left child  = 2 * i + 1
 right child = 2 * i + 2
 ```
 
-The array has a fixed capacity (the number of values to insert) and a current
-size.  At the beginning `size = 0`; after each insertion it grows by one; each
-extraction shrinks it by one.  Keeping `size` separate from `capacity` makes
-the "full" and "empty" cases explicit.
+Le tableau possède une capacité fixe (le nombre de valeurs à insérer) et une taille courante. Au début `size = 0` ; après chaque insertion elle augmente d'un ; chaque extraction la réduit d'un. Garder `size` distinct de `capacity` rend explicites les cas « plein » et « vide ».
 
-Because the tree is complete, there are no holes: the last element is always
-at `size - 1`, and the next insertion goes exactly there.  This is what makes
-the array representation both compact and cache-friendly.
+Comme l'arbre est complet, il n'y a pas de trous : le dernier élément se trouve toujours à `size - 1`, et la prochaine insertion va exactement à cet emplacement. C'est ce qui rend la représentation par tableau à la fois compacte et favorable au cache.
 
 ---
 
 ## Insertion (`entasser`)
 
-1. write the new value at index `size` and increment `size`;
-2. while the value is smaller than its parent, swap them;
-3. stop at the root or as soon as the parent is smaller or equal.
+1. écrire la nouvelle valeur à l'indice `size` et incrémenter `size` ;
+2. tant que la valeur est plus petite que son parent, les échanger ;
+3. s'arrêter à la racine ou dès que le parent est plus petit ou égal.
 
-The path from a leaf to the root has length `floor(log2 n)`, so the worst case
-is `O(log n)`.  The number of swaps is the number of times the value moves
-up, at most the height of the tree.
+Le chemin d'une feuille à la racine a une longueur `floor(log2 n)`, donc le pire cas est `O(log n)`. Le nombre d'échanges est le nombre de fois où la valeur remonte, au plus la hauteur de l'arbre.
 
 ## Extraction (`detasser`)
 
-1. save the root (the minimum);
-2. move the last element to the root and decrement `size`;
-3. sift it down: compare it with both children, swap with the smallest child
-   while that child is smaller than the current value.
+1. sauvegarder la racine (le minimum) ;
+2. déplacer le dernier élément à la racine et décrémenter `size` ;
+3. le faire descendre : le comparer avec ses deux enfants, l'échanger avec le plus petit enfant tant que celui-ci est plus petit que la valeur courante.
 
-Again the cost is `O(log n)`.  Note that after moving the last element to the
-root, only one subtree can violate the heap property at each step, so a single
-downward path is enough.
+Là encore, le coût est `O(log n)`. Notons qu'après avoir déplacé le dernier élément à la racine, un seul sous-arbre peut violer la propriété de tas à chaque étape, donc un seul chemin descendant suffit.
 
-The validity checker (`tas_est_valide`) tests every parent/child pair.  It is
-used by the demo before displaying or extracting, and it is the property the
-tests rely on for random inputs.
+Le vérificateur de validité (`tas_est_valide`) teste chaque paire parent/enfant. Il est utilisé par la démonstration avant l'affichage ou l'extraction, et c'est la propriété sur laquelle s'appuient les tests pour les entrées aléatoires.
 
 ---
 
-## Display
+## Affichage
 
-Three formats are available:
+Trois formats sont disponibles :
 
-| Mode | Output |
+| Mode | Sortie |
 |---|---|
-| `line` | the underlying array on one line |
-| `levels` | one line per depth level |
-| `tree` | an indented ASCII tree with `\|--` and `\--` branches |
+| `line` | le tableau sous-jacent sur une ligne |
+| `levels` | une ligne par niveau de profondeur |
+| `tree` | un arbre ASCII indenté avec les branches `\|--` et `\--` |
 
-Example:
+Exemple :
 
 ```
 38
@@ -86,13 +72,9 @@ Example:
 
 ---
 
-## Heap sort
+## Tri par tas
 
-The heap used for the demonstrations is a **min**-heap, which extracts values
-in increasing order.  For an in-place sort, `tri_par_tas` builds a
-**max**-heap and repeatedly swaps the root with the last element of the
-current prefix.  The maximum goes to its final position, the prefix shrinks,
-and the new root is sifted down.
+Le tas utilisé pour les démonstrations est un tas-**min**, qui extrait les valeurs par ordre croissant. Pour un tri en place, `tri_par_tas` construit un tas-**max** et échange répétitivement la racine avec le dernier élément du préfixe courant. Le maximum va à sa position finale, le préfixe rétrécit, et la nouvelle racine est amenée à descendre.
 
 ```
 build max-heap:      O(n)
@@ -100,41 +82,33 @@ n - 1 extractions:   O(n log n)
 total:               O(n log n), in place, not stable
 ```
 
-Building the heap bottom-up is linear: most nodes are near the leaves and
-sift down very little.  This is better than `n` successive insertions, which
-cost `O(n log n)`.
+Construire le tas de bas en haut est linéaire : la plupart des nœuds sont proches des feuilles et descendent très peu. C'est mieux que `n` insertions successives, qui coûtent `O(n log n)`.
 
 ---
 
-## Reflection
+## Réflexion
 
-### Array versus dynamically allocated tree
+### Tableau versus arbre alloué dynamiquement
 
-| | Array | Linked nodes (`malloc`) |
+| | Tableau | Nœuds chaînés (`malloc`) |
 |---|---|---|
-| Memory per element | one `int` | one `int` + two pointers + allocator overhead |
-| Locality | excellent | poor |
-| Child access | arithmetic | pointer dereference |
-| Complete-tree rule | automatic | must be maintained explicitly |
-| Arbitrary shape | impossible | possible |
-| Allocation during use | none | one allocation per insertion |
-| Failure handling | one initial allocation | every insertion can fail |
+| Mémoire par élément | un `int` | un `int` + deux pointeurs + surcoût de l'allocateur |
+| Localité | excellente | médiocre |
+| Accès aux enfants | arithmétique | déréférencement de pointeur |
+| Règle de l'arbre complet | automatique | doit être maintenue explicitement |
+| Forme arbitraire | impossible | possible |
+| Allocation pendant l'utilisation | aucune | une allocation par insertion |
+| Gestion des échecs | une allocation initiale | chaque insertion peut échouer |
 
-The array version is simpler, faster and uses less memory, but it requires the
-maximum number of elements to be known in advance (or a reallocation policy).
-The linked version supports a truly unbounded heap, at the cost of pointer
-chasing and per-node allocation.
+La version par tableau est plus simple, plus rapide et utilise moins de mémoire, mais elle exige de connaître à l'avance le nombre maximal d'éléments (ou d'avoir une politique de réallocation). La version chaînée permet un tas réellement non borné, au prix du parcours de pointeurs et d'une allocation par nœud.
 
-### In-place heap sort versus extracting into a second array
+### Tri par tas en place versus extraction dans un second tableau
 
-Extracting a min-heap into a second array also produces a sorted result, but
-it needs `O(n)` extra memory.  The in-place variant reuses the input array: it
-builds a max-heap and places each maximum at the end of the shrinking prefix.
-The result is sorted ascending and uses `O(1)` extra memory.
+Extraire un tas-min dans un second tableau produit également un résultat trié, mais nécessite `O(n)` de mémoire supplémentaire. La variante en place réutilise le tableau d'entrée : elle construit un tas-max et place chaque maximum à la fin du préfixe qui rétrécit. Le résultat est trié par ordre croissant et utilise `O(1)` de mémoire supplémentaire.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp02
@@ -145,6 +119,4 @@ make -C tp02
 python3 -m pytest tests/test_tp02.py -q
 ```
 
-The tests check the statement example, the three display modes, reproducible
-random generation, sorted extraction, duplicates, negative values, a
-single-element heap and a 200-element random sort.
+Les tests vérifient l'exemple de l'énoncé, les trois modes d'affichage, la génération aléatoire reproductible, l'extraction triée, les doublons, les valeurs négatives, un tas à un seul élément et un tri aléatoire de 200 éléments.

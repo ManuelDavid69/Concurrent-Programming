@@ -1,38 +1,32 @@
-# TP 3 — Image processing and state machines
+# TP 3 — Traitement d'images et automates à états
 
-## Objectives
+## Objectifs
 
-- manipulate a binary image format (PPM) and its one-dimensional pixel array;
-- implement a 3×3 convolution (mean blur) with a correct border policy;
-- design and implement deterministic finite-state automata for a digicode,
-  including a code with a repeated digit and a code validated by letters.
+- manipuler un format d'image binaire (PPM) et son tableau de pixels à une dimension ;
+- implémenter une convolution 3×3 (flou par moyenne) avec une politique de bord correcte ;
+- concevoir et implémenter des automates finis déterministes pour un digicode, y compris un code contenant un chiffre répété et un code validé par des lettres.
 
 ---
 
-## 1. PPM and the pixel array
+## 1. PPM et le tableau de pixels
 
-A PPM image is either ASCII (`P3`) or binary (`P6`).  The header contains the
-magic number, the width, the height and the maximum channel value (255 here).
-The pixel data is a sequence of RGB triplets.
+Une image PPM est soit ASCII (`P3`), soit binaire (`P6`). L'en-tête contient le nombre magique, la largeur, la hauteur et la valeur maximale des canaux (255 ici). Les données de pixels sont une suite de triplets RGB.
 
-The image is stored in a single `unsigned char *`:
+L'image est stockée dans un unique `unsigned char *` :
 
 ```
 offset(x, y, channel) = 3 * (y * width + x) + channel
 ```
 
-For a 4×3 image, `(0,0) -> 0`, `(1,0) -> 3`, `(0,1) -> 12`.  A
-one-dimensional array is much easier to pass to functions than a
-`unsigned char **`, and it matches the memory layout of the file.
+Pour une image 4×3, `(0,0) -> 0`, `(1,0) -> 3`, `(0,1) -> 12`. Un tableau à une dimension est bien plus facile à passer aux fonctions qu'un `unsigned char **`, et il correspond à la disposition mémoire du fichier.
 
-`image_load` accepts both P3 and P6, skips comments and whitespace, and checks
-every dimension and pixel value.  `image_save` always writes P6.
+`image_load` accepte à la fois P3 et P6, ignore les commentaires et les espaces, et vérifie chaque dimension et chaque valeur de pixel. `image_save` écrit toujours en P6.
 
 ---
 
-## 2. Mean blur
+## 2. Flou par moyenne
 
-The kernel is
+Le noyau est
 
 ```
 1/9 * [ 1 1 1
@@ -40,35 +34,27 @@ The kernel is
         1 1 1 ]
 ```
 
-For each pixel and each channel, sum the nine values and divide by nine.  For
-example, a pixel with neighbours summing to 1215 in red becomes `135`.
+Pour chaque pixel et chaque canal, additionner les neuf valeurs et diviser par neuf. Par exemple, un pixel dont les voisins totalisent 1215 en rouge devient `135`.
 
-### Border policy: kernel crop
+### Politique de bord : recadrage du noyau
 
-At the border, some neighbours do not exist.  Instead of inventing values, the
-implementation ignores them and divides by the number of pixels actually
-used:
+Au bord, certains voisins n'existent pas. Au lieu d'inventer des valeurs, l'implémentation les ignore et divise par le nombre de pixels réellement utilisés :
 
-- corner: 4 pixels;
-- edge (not corner): 6 pixels;
-- interior: 9 pixels.
+- coin : 4 pixels ;
+- bord (hors coin) : 6 pixels ;
+- intérieur : 9 pixels.
 
-This is the *kernel crop* strategy required by the statement.  The output has
-the same dimensions as the input, and a uniform image is unchanged.  The
-other strategies (crop the output, extend, mirror, wrap) are listed in the
-statement; kernel crop is the simplest one that keeps every output pixel
-defined.
+C'est la stratégie de *recadrage du noyau* exigée par l'énoncé. La sortie a les mêmes dimensions que l'entrée, et une image uniforme reste inchangée. Les autres stratégies (recadrer la sortie, étendre, refléter, enrouler) sont listées dans l'énoncé ; le recadrage du noyau est la plus simple qui maintienne défini chaque pixel de sortie.
 
-The complexity is `O(width × height)` with a constant of at most nine
-additions per channel per pixel.
+La complexité est `O(width × height)` avec une constante d'au plus neuf additions par canal et par pixel.
 
 ---
 
 ## 3. Digicode
 
-### Variant 1 — code 5742
+### Variante 1 — code 5742
 
-The automaton has five states:
+L'automate possède cinq états :
 
 ```
         5          7          4          2
@@ -79,49 +65,38 @@ The automaton has five states:
       5 depuis 1, 2 ou 3 ramène à l'état 1
 ```
 
-A wrong digit other than `5` resets the automaton to state 0.  A `5` always
-restarts a possible code, which is exactly the behaviour of the failure
-function of the KMP automaton for the pattern `5742`.
+Un chiffre erroné autre que `5` remet l'automate à l'état 0. Un `5` redémarre toujours un code possible, ce qui correspond exactement au comportement de la fonction d'échec de l'automate KMP pour le motif `5742`.
 
-### Variant 2 — code 5551
+### Variante 2 — code 5551
 
-The repeated digit is the difficulty: after `55`, a new `5` must not reset the
-automaton, it must keep the longest valid prefix.  The KMP failure function
-gives:
+Le chiffre répété constitue la difficulté : après `55`, un nouveau `5` ne doit pas remettre l'automate à zéro, il doit conserver le plus long préfixe valide. La fonction d'échec de KMP donne :
 
-| state | meaning | on `5` | on `1` | other |
+| état | signification | sur `5` | sur `1` | autre |
 |---|---|---|---|---|
-| 0 | nothing | 1 | 0 | 0 |
+| 0 | rien | 1 | 0 | 0 |
 | 1 | `5` | 2 | 0 | 0 |
 | 2 | `55` | 3 | 0 | 0 |
-| 3 | `555` | 3 | 4 (open) | 0 |
+| 3 | `555` | 3 | 4 (ouvert) | 0 |
 
-This is implemented generically by `automate_init`, so the same code handles
-`5742`, `5551` and any other all-digit code.
+Ceci est implémenté de manière générique par `automate_init`, de sorte que le même code gère `5742`, `5551` et tout autre code composé uniquement de chiffres.
 
-### Variant 3 — code 8267B
+### Variante 3 — code 8267B
 
-Here `A` and `B` validate an attempt.  The code is only valid if the four
-digits `8267` were typed since the previous validation letter:
+Ici, `A` et `B` valident une tentative. Le code n'est valide que si les quatre chiffres `8267` ont été saisis depuis la lettre de validation précédente :
 
-- `8267B` → valid;
-- `78267B` → invalid, because the initial `7` is part of the same attempt;
-- `7A8267B` → first attempt `7A` is invalid, second attempt `8267B` is valid.
+- `8267B` → valide ;
+- `78267B` → invalide, car le `7` initial fait partie de la même tentative ;
+- `7A8267B` → la première tentative `7A` est invalide, la seconde tentative `8267B` est valide.
 
-The implementation accumulates at most four digits.  A fifth digit marks the
-attempt as too long, so it can no longer match.  `A` or `B` compares the
-accumulated digits with `8267` and the letter with `B`, prints
-`Code valide` or `Code invalide`, and starts a new attempt.
+L'implémentation accumule au plus quatre chiffres. Un cinquième chiffre marque la tentative comme trop longue, de sorte qu'elle ne peut plus correspondre. `A` ou `B` compare les chiffres accumulés avec `8267` et la lettre avec `B`, affiche `Code valide` ou `Code invalide`, et démarre une nouvelle tentative.
 
-### Transition table
+### Table de transitions
 
-`bin/table` prints the KMP transition table for `5742` and `5551` and a
-readable description of the `8267B` attempt automaton.  This is the written
-answer to the "draw the state machine" part of the statement.
+`bin/table` affiche la table de transitions KMP pour `5742` et `5551` ainsi qu'une description lisible de l'automate des tentatives `8267B`. C'est la réponse écrite à la partie « dessiner l'automate » de l'énoncé.
 
 ---
 
-## Build, run and test
+## Compilation, exécution et tests
 
 ```bash
 make -C tp03
@@ -133,6 +108,4 @@ printf '7A8267B' | ./tp03/bin/digicode 8267B
 python3 -m pytest tests/test_tp03.py -q
 ```
 
-The tests use generated P3 and P6 images, check the kernel-crop values at a
-corner, an interior pixel and a uniform image, and exercise every digicode
-variant, including overlapping codes and the `A`/`B` validation rules.
+Les tests utilisent des images P3 et P6 générées, vérifient les valeurs du recadrage du noyau sur un coin, un pixel intérieur et une image uniforme, et exercent chaque variante de digicode, y compris les codes qui se chevauchent et les règles de validation `A`/`B`.

@@ -7,9 +7,10 @@
 #define AUTOMATE_MAX_CODE 16
 
 /*
- * Deterministic automaton recognising a pattern with the KMP failure
- * function.  When the whole pattern has just been read, feed() returns true
- * and the state goes back to zero, so overlapping occurrences are found.
+ * Automate déterministe reconnaissant un motif avec la fonction d'échec de
+ * KMP.  Lorsque le motif entier vient d'être lu, feed() renvoie true et
+ * l'état revient à zéro, de sorte que les occurrences qui se chevauchent sont
+ * trouvées.
  */
 typedef struct {
     char code[AUTOMATE_MAX_CODE];

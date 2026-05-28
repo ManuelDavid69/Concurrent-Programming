@@ -8,8 +8,8 @@
 #include <unistd.h>
 
 /*
- * Equivalent of: du -sh /usr/share & ls -l & ps
- * The three commands are started before any of them is awaited.
+ * Équivalent de : du -sh /usr/share & ls -l & ps
+ * Les trois commandes sont lancées avant que l'une d'elles ne soit attendue.
  */
 int main(void)
 {

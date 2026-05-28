@@ -5,8 +5,9 @@
 #include <unistd.h>
 
 /*
- * Modified version of case 2.  Each parent waits for its child before
- * printing, so the leaf (E) prints first and the root (A) last: E D C B A.
+ * Version modifiée du cas 2.  Chaque père attend son fils avant d'afficher,
+ * ainsi la feuille (E) s'affiche en premier et la racine (A) en dernier :
+ * E D C B A.
  */
 int main(void)
 {
